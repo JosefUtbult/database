@@ -3,5 +3,3 @@ pub enum DatabaseError {
     SubscriberOverflow,
     SubscriberLock,
 }
-
-
