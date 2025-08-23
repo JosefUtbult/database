@@ -180,7 +180,7 @@ fn test() {
         MyDatabaseParameters::Bob(144),
     ];
 
-    database.set(&changes);
+    database.multi_set(&changes);
     database.notify_subscribers().unwrap();
     assert!(HAS_TRIGGERED.load(Ordering::SeqCst));
 }

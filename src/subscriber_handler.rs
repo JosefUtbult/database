@@ -3,13 +3,19 @@ use crate::{
     database::{DatabaseRef, ParameterChangeList},
 };
 
-pub trait DatabaseSubscriber<DataType>
+/// A `DatabaseSubscriber` is any entity that needs to subscribe to a subset of parameters in a
+/// database. This subset is decided by the `ParameterSubset`. A parameter subset is a struct that
+/// is registered with the `Database` as one permutation of variables present in the database
+pub trait DatabaseSubscriber<ParameterSubset>
 where
-    DataType: Clone + Copy,
+    ParameterSubset: Clone + Copy,
 {
-    fn on_set(&self, change: &DataType);
+    fn on_set(&self, change: &ParameterSubset);
 }
 
+/// A `DatabaseSubscriberHandler` is an handler that is built automatically using the `Database`
+/// proc-macro. This handler will go through a list of parameters and notify all subscribers
+/// relevant to the changes
 pub trait DatabaseSubscriberHandler<InternalContent, Parameter, const PARAMETER_COUNT: usize>
 where
     Parameter: Clone + Copy + Eq,
