@@ -4,7 +4,7 @@ use fixed_string::FixedString;
 
 use crate::{
     content::DatabaseContent,
-    database::{Database, DatabaseRef, ParameterChangeList},
+    database::{DatabaseHandler, DatabaseRef, ParameterChangeList},
     database_error::DatabaseError,
     subscriber_handler::{DatabaseSubscriber, DatabaseSubscriberHandler},
 };
@@ -153,8 +153,8 @@ impl DatabaseContent<MyDatabaseParameters, 3> for MyDatabaseContent {
 
 #[test]
 fn test() {
-    let database: Database<MyDatabaseContent, MySubscriberHandler, MyDatabaseParameters, 3> =
-        Database::new(MyDatabaseContent::new(), MySubscriberHandler::new());
+    let database: DatabaseHandler<MyDatabaseContent, MySubscriberHandler, MyDatabaseParameters, 3> =
+        DatabaseHandler::new(MyDatabaseContent::new(), MySubscriberHandler::new());
 
     struct MySubsetSubscriber {}
 

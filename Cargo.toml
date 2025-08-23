@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-
+database_macro = { path = "./database_macro/" }
 fixed_string = { path = "./lib/fixed_string" }
 
 critical-section = { version = "1.2.0"}

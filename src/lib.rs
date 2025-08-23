@@ -19,6 +19,10 @@ mod content;
 mod database;
 mod database_error;
 mod subscriber_handler;
+mod macro_implementation;
+
+#[cfg(test)]
 mod tests;
 
+pub use database_macro::*;
 pub use crate::{content::*, database::*, database_error::*, subscriber_handler::*};

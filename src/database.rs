@@ -29,7 +29,7 @@ where
 
 /// A `Database` structure is a component that keeps track of an internal content list of
 /// parameters, a list of subscriber and whether parameters has changed
-pub struct Database<
+pub struct DatabaseHandler<
     InternalContent,
     InternalSubscriberHandler,
     Parameter,
@@ -48,7 +48,7 @@ pub struct Database<
 
 impl<InternalContent, InternalSubscriberHandler, Parameter, const PARAMETER_COUNT: usize>
     DatabaseRef<Parameter>
-    for Database<InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
+    for DatabaseHandler<InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
 where
     Parameter: Copy + Clone + Eq,
     usize: From<Parameter>,
@@ -63,7 +63,7 @@ where
 }
 
 impl<InternalContent, InternalSubscriberHandler, Parameter, const PARAMETER_COUNT: usize>
-    Database<InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
+    DatabaseHandler<InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
 where
     Parameter: Copy + Clone + Eq,
     usize: From<Parameter>,
