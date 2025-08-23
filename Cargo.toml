@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+fixed_string = { path = "./lib/fixed_string" }
+
+critical-section = { version = "1.2.0"}
+spin = { version = "0.9.8" }
+
+# Critical section works a bit oddly, as the std feature is needed
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+critical-section = { version = "1.2.0", features = ["std"] }
