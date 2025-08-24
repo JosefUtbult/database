@@ -158,9 +158,10 @@ fn test() {
     let subscriber = MySubsetSubscriber {};
 
     database
-        .with_subscriber_handler(|subscriber_handler| {
-            subscriber_handler.subscribe_with_content_subset(&subscriber)
-        })
+        .get_subscriber_handler()
+        .lock()
+        .borrow_mut()
+        .subscribe_with_content_subset(&subscriber)
         .unwrap();
 
     let changes: [MyDatabaseParameters; 2] = [
