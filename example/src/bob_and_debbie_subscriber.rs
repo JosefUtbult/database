@@ -7,20 +7,19 @@ use crate::database_content::*;
 #[superset(MyDatabase)]
 pub struct BobAndDebbieSubset {
     bob: u16,
-    debbie: bool
+    debbie: bool,
 }
 
 pub struct BobAndDebbieSubscriber {}
 
-impl
-    DatabaseSubscriber<
-        BobAndDebbieSubset,
-        MyDatabaseMember,
-        MY_DATABASE_MEMBER_COUNT,
-    > for BobAndDebbieSubscriber
+impl DatabaseSubscriber<BobAndDebbieSubset, MyDatabaseMember, MY_DATABASE_MEMBER_COUNT>
+    for BobAndDebbieSubscriber
 {
     fn on_set(&self, change: &BobAndDebbieSubset) {
-        std::println!("Bob changed! Bob: {}, Debbie: {}", change.bob, change.debbie);
+        std::println!(
+            "Bob changed! Bob: {}, Debbie: {}",
+            change.bob,
+            change.debbie
+        );
     }
 }
-

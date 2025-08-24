@@ -18,7 +18,6 @@
 mod content;
 mod database;
 mod database_error;
-mod macro_implementation;
 mod subscriber_handler;
 mod subset;
 
