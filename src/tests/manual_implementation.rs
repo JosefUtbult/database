@@ -3,6 +3,7 @@ use core::sync::atomic::{AtomicBool, Ordering};
 use fixed_string::FixedString;
 
 use crate::{
+    Subset,
     content::DatabaseContent,
     database::{DatabaseHandler, DatabaseRef, ParameterChangeList},
     database_error::DatabaseError,
@@ -45,7 +46,8 @@ impl From<MyDatabaseParameters> for usize {
 }
 
 struct MySubscriberHandler<'a> {
-    my_content_subset_subscribers: [Option<&'a dyn DatabaseSubscriber<MyContentSubset>>; 128],
+    my_content_subset_subscribers:
+        [Option<&'a dyn DatabaseSubscriber<MyContentSubset, MyDatabaseParameters, 3>>; 128],
 }
 
 impl<'a> MySubscriberHandler<'a> {
@@ -57,7 +59,7 @@ impl<'a> MySubscriberHandler<'a> {
 
     fn subscribe_with_content_subset(
         &mut self,
-        subscriber: &'a dyn DatabaseSubscriber<MyContentSubset>,
+        subscriber: &'a dyn DatabaseSubscriber<MyContentSubset, MyDatabaseParameters, 3>,
     ) -> Result<(), DatabaseError> {
         for instance in self.my_content_subset_subscribers.iter_mut() {
             if instance.is_none() {
@@ -77,42 +79,14 @@ impl<'a> DatabaseSubscriberHandler<MyDatabaseContent, MyDatabaseParameters, 3>
         database: &dyn DatabaseRef<MyDatabaseParameters>,
         parameter_change: &ParameterChangeList<MyDatabaseParameters, 3>,
     ) {
-        #[allow(unused_variables)]
-        let alice = match database.internal_get(&MyDatabaseParameters::Alice(u8::default())) {
-            MyDatabaseParameters::Alice(value) => value,
-            _ => unreachable!(),
-        };
-
-        #[allow(unused_variables)]
-        let bob = match database.internal_get(&MyDatabaseParameters::Bob(u16::default())) {
-            MyDatabaseParameters::Bob(value) => value,
-            _ => unreachable!(),
-        };
-
-        #[allow(unused_variables)]
-        let charlie = match database
-            .internal_get(&MyDatabaseParameters::Charlie(FixedString::<20>::default()))
-        {
-            MyDatabaseParameters::Charlie(value) => value,
-            _ => unreachable!(),
-        };
-
-        #[allow(unused_variables)]
-        let debbie = match database.internal_get(&MyDatabaseParameters::Debbie(isize::default())) {
-            MyDatabaseParameters::Debbie(value) => value,
-            _ => unreachable!(),
-        };
-
         // MyContentSubset
-        let index: usize = MyDatabaseParameters::Alice(u8::default()).into();
-        if parameter_change[index].is_some()
-            || parameter_change[MyDatabaseParameters::Charlie as usize].is_some()
         {
-            let payload = MyContentSubset { alice, debbie };
-
-            for subscriber in self.my_content_subset_subscribers {
-                if let Some(subscriber) = subscriber {
-                    subscriber.on_set(&payload);
+            if MyContentSubset::is_subscribed(parameter_change) {
+                let subset = MyContentSubset::build_from_database(database);
+                for instance in self.my_content_subset_subscribers.iter() {
+                    if let Some(instance) = instance {
+                        instance.on_set(&subset);
+                    }
                 }
             }
         }
@@ -151,6 +125,28 @@ impl DatabaseContent<MyDatabaseParameters, 3> for MyDatabaseContent {
     }
 }
 
+impl Subset<MyDatabaseParameters, 3> for MyContentSubset {
+    fn is_subscribed(parameter_change: &ParameterChangeList<MyDatabaseParameters, 3>) -> bool {
+        let alice_index: usize = MyDatabaseParameters::Alice(u8::default()).into();
+        let debbie_index: usize = MyDatabaseParameters::Alice(u8::default()).into();
+        parameter_change[alice_index].is_some() || parameter_change[debbie_index].is_some()
+    }
+
+    fn build_from_database(database: &dyn DatabaseRef<MyDatabaseParameters>) -> Self {
+        let alice = match database.internal_get(&MyDatabaseParameters::Alice(u8::default())) {
+            MyDatabaseParameters::Alice(value) => value,
+            _ => unreachable!(),
+        };
+
+        let debbie = match database.internal_get(&MyDatabaseParameters::Debbie(isize::default())) {
+            MyDatabaseParameters::Debbie(value) => value,
+            _ => unreachable!(),
+        };
+
+        Self { alice, debbie }
+    }
+}
+
 #[test]
 fn test() {
     let database: DatabaseHandler<MyDatabaseContent, MySubscriberHandler, MyDatabaseParameters, 3> =
@@ -159,7 +155,7 @@ fn test() {
     struct MySubsetSubscriber {}
 
     static HAS_TRIGGERED: AtomicBool = AtomicBool::new(false);
-    impl DatabaseSubscriber<MyContentSubset> for MySubsetSubscriber {
+    impl DatabaseSubscriber<MyContentSubset, MyDatabaseParameters, 3> for MySubsetSubscriber {
         fn on_set(&self, change: &MyContentSubset) {
             HAS_TRIGGERED.store(true, Ordering::SeqCst);
             assert_eq!(change.alice, 2);

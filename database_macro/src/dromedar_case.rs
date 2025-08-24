@@ -11,15 +11,19 @@ pub(crate) fn to_dromedar_case(s: &str) -> String {
         .join("")
 }
 
-pub(crate) fn to_upper_snake_case(s: &str) -> String {
+pub(crate) fn to_snake_case(s: &str) -> String {
     let mut result = String::new();
 
     for (i, ch) in s.chars().enumerate() {
         if ch.is_uppercase() && i != 0 {
             result.push('_');
         }
-        result.push(ch.to_ascii_uppercase());
+        result.push(ch.to_ascii_lowercase());
     }
 
     result
+}
+
+pub(crate) fn to_upper_snake_case(s: &str) -> String {
+    to_snake_case(s).to_ascii_uppercase()
 }

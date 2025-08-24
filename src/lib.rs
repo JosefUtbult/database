@@ -16,6 +16,7 @@
 #![no_std]
 
 mod content;
+mod subset;
 mod database;
 mod database_error;
 mod subscriber_handler;
@@ -25,4 +26,4 @@ mod macro_implementation;
 mod tests;
 
 pub use database_macro::*;
-pub use crate::{content::*, database::*, database_error::*, subscriber_handler::*};
+pub use crate::{content::*, subset::*, database::*, database_error::*, subscriber_handler::*};

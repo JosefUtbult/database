@@ -2,7 +2,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::Ident;
 
-use crate::{Field, to_dromedar_case};
+use crate::{derive_database::Field, dromedar_case::to_dromedar_case};
 
 pub(crate) fn generate_parameters_enum(
     enum_name: &Ident,

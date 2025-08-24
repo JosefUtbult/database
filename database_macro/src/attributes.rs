@@ -1,9 +1,9 @@
 use core::panic;
 use syn::{Data, DeriveInput, Fields, Ident, Meta, NestedMeta};
 
-use crate::Field;
+use crate::derive_database::Field;
 
-pub(crate) fn extract_attributes(input: &DeriveInput) -> (Ident, Vec<Ident>) {
+pub(crate) fn extract_database_attributes(input: &DeriveInput) -> (Ident, Vec<Ident>) {
     // Parse attributes
     let mut database_name: Option<Ident> = None;
     let mut subsets: Vec<Ident> = Vec::new();
@@ -35,11 +35,31 @@ pub(crate) fn extract_attributes(input: &DeriveInput) -> (Ident, Vec<Ident>) {
     (database_name, subsets)
 }
 
+pub(crate) fn extract_subset_attributes(input: &DeriveInput) -> Ident {
+    // Parse attributes
+    let mut superset: Option<Ident> = None;
+    for attr in &input.attrs {
+        if attr.path.is_ident("superset") {
+            if let Ok(Meta::List(meta_list)) = attr.parse_meta() {
+                if let Some(NestedMeta::Meta(Meta::Path(path))) = meta_list.nested.first() {
+                    superset = path.get_ident().cloned();
+                    break;
+                }
+            }
+        }
+    }
+
+    match superset {
+        Some(superset) => superset,
+        None => panic!("superset to the subset needs to be supplied"),
+    }
+}
+
 pub(crate) fn extract_fields(input: &DeriveInput) -> Vec<Field> {
     // Extract the fields from the input
     let fields = match input.data {
         Data::Struct(ref data_struct) => &data_struct.fields,
-        _ => panic!("#[derive(Database)] can only be applied to structs"),
+        _ => panic!("Can only be applied to structs"),
     };
 
     // Collect field names and types

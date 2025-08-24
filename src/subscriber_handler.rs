@@ -1,4 +1,5 @@
 use crate::{
+    Subset,
     content::DatabaseContent,
     database::{DatabaseRef, ParameterChangeList},
 };
@@ -6,9 +7,10 @@ use crate::{
 /// A `DatabaseSubscriber` is any entity that needs to subscribe to a subset of parameters in a
 /// database. This subset is decided by the `ParameterSubset`. A parameter subset is a struct that
 /// is registered with the `Database` as one permutation of variables present in the database
-pub trait DatabaseSubscriber<ParameterSubset>
+pub trait DatabaseSubscriber<ParameterSubset, Parameter, const PARAMETER_COUNT: usize>
 where
-    ParameterSubset: Clone + Copy,
+    Parameter: Clone + Copy + Eq,
+    ParameterSubset: Subset<Parameter, PARAMETER_COUNT> + Clone + Copy,
 {
     fn on_set(&self, change: &ParameterSubset);
 }
