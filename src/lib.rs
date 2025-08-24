@@ -16,14 +16,14 @@
 #![no_std]
 
 mod content;
-mod subset;
 mod database;
 mod database_error;
-mod subscriber_handler;
 mod macro_implementation;
+mod subscriber_handler;
+mod subset;
 
 #[cfg(test)]
 mod tests;
 
+pub use crate::{content::*, database::*, database_error::*, subscriber_handler::*, subset::*};
 pub use database_macro::*;
-pub use crate::{content::*, subset::*, database::*, database_error::*, subscriber_handler::*};
