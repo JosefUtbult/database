@@ -19,7 +19,7 @@ pub(crate) fn generate_subscriber_handler_impl(
     // Generates a variable declaration for a subscriber handler struct implementation.
     // Expands to the following
     //
-    //  my_subset1_subscribers: [Option<&'a dyn database::DatabaseSubscriber<MySubset1>>; 128],
+    //  my_subset1_subscribers: [Option<&'a dyn database::DatabaseSubscriber<MySubset1>>; 4],
     let subset_variables: TokenStream2 = subsets
         .iter()
         .map(|subset| {
@@ -29,14 +29,14 @@ pub(crate) fn generate_subscriber_handler_impl(
             );
 
             quote! {
-                #name: [Option<&'a dyn #crate_path::DatabaseSubscriber<#subset, #enum_name, #enum_size>>; 128],
+                #name: [Option<&'a dyn #crate_path::DatabaseSubscriber<#subset, #enum_name, #enum_size>>; 4],
             }
         })
         .collect();
 
     // Generates a new implementation for a subscribers list. Expands to the following
     //
-    // my_subset1_subscribers: [None; 128],
+    // my_subset1_subscribers: [None; 4],
     let subset_new_values: TokenStream2 = subsets
         .iter()
         .map(|subset| {
@@ -46,7 +46,7 @@ pub(crate) fn generate_subscriber_handler_impl(
             );
 
             quote! {
-                #name: [None; 128],
+                #name: [None; 4],
             }
         })
         .collect();
