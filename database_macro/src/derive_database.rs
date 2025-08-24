@@ -6,6 +6,7 @@ use syn::{DeriveInput, Ident, Type, parse_macro_input};
 use crate::{
     attributes::{extract_database_attributes, extract_fields},
     content_impl::generate_database_content_impl,
+    database_impl::generate_database_impl,
     dromedar_case::to_upper_snake_case,
     enum_impl::generate_parameters_enum,
     get_crate_path,
@@ -47,12 +48,22 @@ pub(crate) fn derive_database(input: TokenStream) -> TokenStream {
         &subsets,
     );
 
+    let database_impl = generate_database_impl(
+        &crate_path,
+        &database_name,
+        &name,
+        &enum_name_ident,
+        &enum_size_ident,
+    );
+
     let expanded = quote! {
         #parameters_enum
 
         #content_implementation
 
         #subscriber_handler_impl
+
+        #database_impl
     };
 
     TokenStream::from(expanded)
