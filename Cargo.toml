@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 database_macro = { path = "./database_macro/" }
-fixed_string = { path = "./lib/fixed_string" }
 
 critical-section = { version = "1.2.0"}
 spin = { version = "0.9.8" }

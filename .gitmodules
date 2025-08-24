@@ -1,3 +1,0 @@
-[submodule "lib/fixed_string"]
-	path = lib/fixed_string
-	url = git@github.com:JosefUtbult/fixed_string.git
