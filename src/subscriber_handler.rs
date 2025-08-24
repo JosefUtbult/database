@@ -18,7 +18,7 @@ where
 /// A `DatabaseSubscriberHandler` is an handler that is built automatically using the `Database`
 /// proc-macro. This handler will go through a list of parameters and notify all subscribers
 /// relevant to the changes
-pub trait DatabaseSubscriberHandler<InternalContent, Parameter, const PARAMETER_COUNT: usize>
+pub trait DatabaseSubscriberHandler<'a, InternalContent, Parameter, const PARAMETER_COUNT: usize>
 where
     Parameter: Clone + Copy + Eq,
     InternalContent: DatabaseContent<Parameter, PARAMETER_COUNT>,

@@ -17,7 +17,7 @@ pub(crate) fn generate_database_impl(
 
     // Build full impl
     quote! {
-        pub struct #database_name<'a>(#crate_path::DatabaseHandler<#struct_name, #subscriber_handler_ident<'a>, #enum_name, #enum_size>);
+        pub struct #database_name<'a>(#crate_path::DatabaseHandler<'a, #struct_name, #subscriber_handler_ident<'a>, #enum_name, #enum_size>);
 
         impl<'a> #database_name<'a> {
             fn new(content: #struct_name) -> Self {
@@ -53,11 +53,8 @@ pub(crate) fn generate_database_impl(
             /// Retrieve a handle to the internal subscriber handler. Used to subscribe to different
             /// subsets of the parameter space. This should be done before actively using the database, as
             /// this can cause locking errors resulting in a failure to notify subscribers
-            pub fn with_subscriber_handler<Function, ReturnType>(&self, f: Function) -> ReturnType
-            where
-                Function: FnOnce(&mut #subscriber_handler_ident) -> ReturnType,
-            {
-                self.0.with_subscriber_handler(f)
+            pub fn get_subscriber_handler(&'a self) -> &'a #crate_path::SpinMutex<#crate_path::RefCell<#subscriber_handler_ident>> {
+                self.0.get_subscriber_handler()
             }
         }
     }

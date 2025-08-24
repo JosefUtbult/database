@@ -1,7 +1,5 @@
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use fixed_string::FixedString;
-
 use crate::{
     Subset,
     content::DatabaseContent,
@@ -15,7 +13,6 @@ use crate::{
 struct MyDatabaseContent {
     alice: u8,
     bob: u16,
-    charlie: FixedString<20>,
     debbie: isize,
 }
 
@@ -30,7 +27,6 @@ struct MyContentSubset {
 enum MyDatabaseParameters {
     Alice(u8),
     Bob(u16),
-    Charlie(FixedString<20>),
     Debbie(isize),
 }
 
@@ -39,8 +35,7 @@ impl From<MyDatabaseParameters> for usize {
         match value {
             MyDatabaseParameters::Alice(_) => 0,
             MyDatabaseParameters::Bob(_) => 1,
-            MyDatabaseParameters::Charlie(_) => 2,
-            MyDatabaseParameters::Debbie(_) => 3,
+            MyDatabaseParameters::Debbie(_) => 2,
         }
     }
 }
@@ -71,7 +66,7 @@ impl<'a> MySubscriberHandler<'a> {
     }
 }
 
-impl<'a> DatabaseSubscriberHandler<MyDatabaseContent, MyDatabaseParameters, 3>
+impl<'a> DatabaseSubscriberHandler<'a, MyDatabaseContent, MyDatabaseParameters, 3>
     for MySubscriberHandler<'a>
 {
     fn notify_subscribers(
@@ -99,7 +94,6 @@ impl MyDatabaseContent {
         Self {
             alice: 13,
             bob: 4443,
-            charlie: FixedString::new_with("Hello").unwrap(),
             debbie: -1,
         }
     }
@@ -110,7 +104,6 @@ impl DatabaseContent<MyDatabaseParameters, 3> for MyDatabaseContent {
         match parameter {
             MyDatabaseParameters::Alice(value) => self.alice = value,
             MyDatabaseParameters::Bob(value) => self.bob = value,
-            MyDatabaseParameters::Charlie(value) => self.charlie = value,
             MyDatabaseParameters::Debbie(value) => self.debbie = value,
         }
     }
@@ -119,7 +112,6 @@ impl DatabaseContent<MyDatabaseParameters, 3> for MyDatabaseContent {
         match parameter {
             MyDatabaseParameters::Alice(_) => MyDatabaseParameters::Alice(self.alice),
             MyDatabaseParameters::Bob(_) => MyDatabaseParameters::Bob(self.bob),
-            MyDatabaseParameters::Charlie(_) => MyDatabaseParameters::Charlie(self.charlie),
             MyDatabaseParameters::Debbie(_) => MyDatabaseParameters::Debbie(self.debbie),
         }
     }

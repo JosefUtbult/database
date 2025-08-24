@@ -1,9 +1,8 @@
-use core::{
-    cell::RefCell,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use core::sync::atomic::{AtomicBool, Ordering};
 use critical_section::{Mutex as CriticalMutex, with as critical};
-use spin::Mutex as SpinMutex;
+
+pub use core::cell::RefCell;
+pub use spin::Mutex as SpinMutex;
 
 use crate::{
     content::DatabaseContent, database_error::DatabaseError,
@@ -30,6 +29,7 @@ where
 /// A `Database` structure is a component that keeps track of an internal content list of
 /// parameters, a list of subscriber and whether parameters has changed
 pub struct DatabaseHandler<
+    'a,
     InternalContent,
     InternalSubscriberHandler,
     Parameter,
@@ -37,24 +37,25 @@ pub struct DatabaseHandler<
 > where
     InternalContent: DatabaseContent<Parameter, PARAMETER_COUNT>,
     InternalSubscriberHandler:
-        DatabaseSubscriberHandler<InternalContent, Parameter, PARAMETER_COUNT>,
+        DatabaseSubscriberHandler<'a, InternalContent, Parameter, PARAMETER_COUNT>,
     Parameter: Clone + Copy + Eq,
 {
     content: CriticalMutex<RefCell<InternalContent>>,
     change_list: CriticalMutex<RefCell<ParameterChangeList<Parameter, PARAMETER_COUNT>>>,
     subscriber_handler: SpinMutex<RefCell<InternalSubscriberHandler>>,
     has_changed: AtomicBool,
+    phantom_data: Option<&'a u8>,
 }
 
-impl<InternalContent, InternalSubscriberHandler, Parameter, const PARAMETER_COUNT: usize>
+impl<'a, InternalContent, InternalSubscriberHandler, Parameter, const PARAMETER_COUNT: usize>
     DatabaseRef<Parameter>
-    for DatabaseHandler<InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
+    for DatabaseHandler<'a, InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
 where
     Parameter: Copy + Clone + Eq,
     usize: From<Parameter>,
     InternalContent: DatabaseContent<Parameter, PARAMETER_COUNT>,
     InternalSubscriberHandler:
-        DatabaseSubscriberHandler<InternalContent, Parameter, PARAMETER_COUNT>,
+        DatabaseSubscriberHandler<'a, InternalContent, Parameter, PARAMETER_COUNT>,
 {
     /// Glue to get the database to be referenced by a subscriber handler
     fn internal_get(&self, parameter: &Parameter) -> Parameter {
@@ -62,14 +63,14 @@ where
     }
 }
 
-impl<InternalContent, InternalSubscriberHandler, Parameter, const PARAMETER_COUNT: usize>
-    DatabaseHandler<InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
+impl<'a, InternalContent, InternalSubscriberHandler, Parameter, const PARAMETER_COUNT: usize>
+    DatabaseHandler<'a, InternalContent, InternalSubscriberHandler, Parameter, PARAMETER_COUNT>
 where
     Parameter: Copy + Clone + Eq,
     usize: From<Parameter>,
     InternalContent: DatabaseContent<Parameter, PARAMETER_COUNT>,
     InternalSubscriberHandler:
-        DatabaseSubscriberHandler<InternalContent, Parameter, PARAMETER_COUNT>,
+        DatabaseSubscriberHandler<'a, InternalContent, Parameter, PARAMETER_COUNT>,
 {
     /// Create a new instance if a `Database`, templated with the content, subscriber handler,
     /// parameter enum type and the number of members in that enum
@@ -82,6 +83,7 @@ where
             change_list: CriticalMutex::new(RefCell::new([const { None }; PARAMETER_COUNT])),
             subscriber_handler: SpinMutex::new(RefCell::new(subscriber_handler)),
             has_changed: AtomicBool::new(false),
+            phantom_data: None,
         }
     }
 
@@ -189,12 +191,7 @@ where
     /// Retrieve a handle to the internal subscriber handler. Used to subscribe to different
     /// subsets of the parameter space. This should be done before actively using the database, as
     /// this can cause locking errors resulting in a failure to notify subscribers
-    pub fn with_subscriber_handler<Function, ReturnType>(&self, f: Function) -> ReturnType
-    where
-        Function: FnOnce(&mut InternalSubscriberHandler) -> ReturnType,
-    {
-        let lock = self.subscriber_handler.lock();
-        let mut inner = lock.borrow_mut();
-        f(&mut inner)
+    pub fn get_subscriber_handler(&'a self) -> &'a SpinMutex<RefCell<InternalSubscriberHandler>> {
+        &self.subscriber_handler
     }
 }

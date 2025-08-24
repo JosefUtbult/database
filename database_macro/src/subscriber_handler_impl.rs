@@ -2,10 +2,7 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
 use syn::Ident;
 
-use crate::{
-    derive_database::Field,
-    dromedar_case::{to_dromedar_case, to_snake_case},
-};
+use crate::dromedar_case::to_snake_case;
 
 pub(crate) fn generate_subscriber_handler_impl(
     crate_path: &TokenStream2,
@@ -158,7 +155,7 @@ pub(crate) fn generate_subscriber_handler_impl(
         }
 
         #[automatically_derived]
-        impl<'a> #crate_path::DatabaseSubscriberHandler<#struct_name, #enum_name, #enum_size>
+        impl<'a> #crate_path::DatabaseSubscriberHandler<'a, #struct_name, #enum_name, #enum_size>
             for #handler_ident<'a>
         {
             fn notify_subscribers(

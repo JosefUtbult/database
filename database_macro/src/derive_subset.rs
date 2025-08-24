@@ -25,9 +25,6 @@ pub(crate) fn derive_subset(input: TokenStream) -> TokenStream {
     let enum_size_str = format!("{}_COUNT", to_upper_snake_case(&enum_name_str));
     let enum_size_ident = Ident::new(&enum_size_str, Span::call_site());
 
-    let subscriber_name = format!("{}Subscriber", name);
-    let subscriber_name_ident = Ident::new(&subscriber_name, Span::call_site());
-
     // Generate a check for if a specified field has been changed in the parameter change list
     //
     // Expands to the following
@@ -116,9 +113,6 @@ pub(crate) fn derive_subset(input: TokenStream) -> TokenStream {
                 }
             }
         }
-
-        // Type definition of what to implement to get `on_set`
-        // pub trait #subscriber_name_ident :#crate_path::DatabaseSubscriber<#name, #superset, #enum_size_ident> {}
     };
 
     TokenStream::from(expanded)
