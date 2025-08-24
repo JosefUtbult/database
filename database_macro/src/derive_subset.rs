@@ -5,10 +5,10 @@ use quote::quote;
 use syn::{DeriveInput, Ident, parse_macro_input};
 
 use crate::dromedar_case::to_dromedar_case;
+use crate::enum_impl::generate_enum_names;
 use crate::{
     attributes::{extract_fields, extract_subset_attributes},
     derive_database::Field,
-    dromedar_case::to_upper_snake_case,
     get_crate_path,
 };
 
@@ -20,10 +20,7 @@ pub(crate) fn derive_subset(input: TokenStream) -> TokenStream {
     let superset = extract_subset_attributes(&input);
     let fields: Vec<Field> = extract_fields(&input);
 
-    let enum_name_str = format!("{}Parameters", superset);
-    let enum_name_ident = Ident::new(&enum_name_str, Span::call_site());
-    let enum_size_str = format!("{}_COUNT", to_upper_snake_case(&enum_name_str));
-    let enum_size_ident = Ident::new(&enum_size_str, Span::call_site());
+    let (enum_name_ident, enum_size_ident) = generate_enum_names(&superset);
 
     // Generate a check for if a specified field has been changed in the parameter change list
     //
@@ -95,7 +92,7 @@ pub(crate) fn derive_subset(input: TokenStream) -> TokenStream {
         .collect();
 
     let expanded = quote! {
-        impl #crate_path::Subset<#enum_name_ident, 3> for #name {
+        impl #crate_path::Subset<#enum_name_ident, #enum_size_ident> for #name {
             fn is_subscribed(parameter_change: &#crate_path::ParameterChangeList<#enum_name_ident, #enum_size_ident>) -> bool {
                 let mut parameter_changed = false;
 

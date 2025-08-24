@@ -44,6 +44,7 @@ pub struct DatabaseHandler<
     change_list: CriticalMutex<RefCell<ParameterChangeList<Parameter, PARAMETER_COUNT>>>,
     subscriber_handler: SpinMutex<RefCell<InternalSubscriberHandler>>,
     has_changed: AtomicBool,
+    #[allow(dead_code)]
     phantom_data: Option<&'a u8>,
 }
 

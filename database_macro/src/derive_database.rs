@@ -7,8 +7,7 @@ use crate::{
     attributes::{extract_database_attributes, extract_fields},
     content_impl::generate_database_content_impl,
     database_impl::generate_database_impl,
-    dromedar_case::to_upper_snake_case,
-    enum_impl::generate_parameters_enum,
+    enum_impl::{generate_enum_names, generate_parameters_enum},
     get_crate_path,
     subscriber_handler_impl::generate_subscriber_handler_impl,
 };
@@ -25,10 +24,7 @@ pub(crate) fn derive_database(input: TokenStream) -> TokenStream {
     let (database_name, subsets) = extract_database_attributes(&input);
     let fields: Vec<Field> = extract_fields(&input);
 
-    let enum_name_str = format!("{}Parameters", name);
-    let enum_name_ident = Ident::new(&enum_name_str, Span::call_site());
-    let enum_size_str = format!("{}_COUNT", to_upper_snake_case(&enum_name_str));
-    let enum_size_ident = Ident::new(&enum_size_str, Span::call_site());
+    let (enum_name_ident, enum_size_ident) = generate_enum_names(&database_name);
 
     let parameters_enum = generate_parameters_enum(&enum_name_ident, &enum_size_ident, &fields);
 

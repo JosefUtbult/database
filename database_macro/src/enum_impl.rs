@@ -1,8 +1,21 @@
+use proc_macro2::Span;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::Ident;
 
-use crate::{derive_database::Field, dromedar_case::to_dromedar_case};
+use crate::{
+    derive_database::Field,
+    dromedar_case::{to_dromedar_case, to_upper_snake_case},
+};
+
+pub(crate) fn generate_enum_names(database_name: &Ident) -> (Ident, Ident) {
+    let enum_name_str = format!("{}Member", database_name);
+    let enum_name_ident = Ident::new(&enum_name_str, Span::call_site());
+    let enum_size_str = format!("{}_COUNT", to_upper_snake_case(&enum_name_str));
+    let enum_size_ident = Ident::new(&enum_size_str, Span::call_site());
+
+    (enum_name_ident, enum_size_ident)
+}
 
 pub(crate) fn generate_parameters_enum(
     enum_name: &Ident,
@@ -36,11 +49,11 @@ pub(crate) fn generate_parameters_enum(
 
     // Combine enum + From impl
     quote! {
-        const #enum_size: usize = #param_count;
+        pub const #enum_size: usize = #param_count;
 
         #[allow(dead_code)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        enum #enum_name {
+        pub enum #enum_name {
             #variants_tokens
         }
 

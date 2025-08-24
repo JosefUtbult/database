@@ -20,7 +20,7 @@ pub(crate) fn generate_database_impl(
         pub struct #database_name<'a>(#crate_path::DatabaseHandler<'a, #struct_name, #subscriber_handler_ident<'a>, #enum_name, #enum_size>);
 
         impl<'a> #database_name<'a> {
-            fn new(content: #struct_name) -> Self {
+            pub fn new(content: #struct_name) -> Self {
                 Self(#crate_path::DatabaseHandler::new(content, #subscriber_handler_ident::new()))
             }
 
