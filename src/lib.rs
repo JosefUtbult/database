@@ -9,4 +9,5 @@ mod subscriber;
 pub use subscriber::*;
 
 mod test_types;
+#[allow(unused_imports)]
 use test_types::*;

@@ -13,7 +13,7 @@ pub(crate) mod test_types {
             Self {
                 param1: 0,
                 param2: false,
-                param3: 0
+                param3: 0,
             }
         }
     }
@@ -23,29 +23,29 @@ pub(crate) mod test_types {
     pub(crate) enum MyDataKeys {
         Param1,
         Param2,
-        Param3
+        Param3,
     }
 
-    impl From<MyDataKeys> for usize {
-        fn from(value: MyDataKeys) -> Self {
+    impl From<MyDataFields> for MyDataKeys {
+        fn from(value: MyDataFields) -> Self {
             match value {
-                MyDataKeys::Param1 => 0,
-                MyDataKeys::Param2 => 1,
-                MyDataKeys::Param3 => 2,
+                MyDataFields::Param1(_) => MyDataKeys::Param1,
+                MyDataFields::Param2(_) => MyDataKeys::Param2,
+                MyDataFields::Param3(_) => MyDataKeys::Param3,
             }
         }
     }
 
-    pub(crate) const MY_DATA_PARAMETER_COUNT: usize = 2;
+    pub(crate) const MY_DATA_PARAMETER_COUNT: usize = 3;
 
-    #[allow(dead_code)]
-    pub(crate) const ALL_MY_DATA_KEYS: [MyDataKeys; MY_DATA_PARAMETER_COUNT] = [MyDataKeys::Param1, MyDataKeys::Param2];
+    pub(crate) const ALL_MY_DATA_KEYS: [MyDataKeys; MY_DATA_PARAMETER_COUNT] =
+        [MyDataKeys::Param1, MyDataKeys::Param2, MyDataKeys::Param3];
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
     pub(crate) enum MyDataFields {
         Param1(u8),
         Param2(bool),
-        Param3(u8)
+        Param3(u8),
     }
 
     #[derive(Debug, PartialEq, Eq)]
