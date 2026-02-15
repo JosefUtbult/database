@@ -24,24 +24,24 @@ pub enum SubscriberError {
     Overflow,
 }
 
-struct VectorMap<Key, Param, const KEY_COUNT: usize, const PARAM_COUNT: usize>(
-    LinearMap<Key, Vec<Param, PARAM_COUNT>, KEY_COUNT>,
+struct VectorMap<FlatKey, FlatField, const KEY_COUNT: usize, const PARAM_COUNT: usize>(
+    LinearMap<FlatKey, Vec<FlatField, PARAM_COUNT>, KEY_COUNT>,
 );
 
-impl<Key, Param, const KEY_COUNT: usize, const PARAM_COUNT: usize>
-    VectorMap<Key, Param, KEY_COUNT, PARAM_COUNT>
+impl<FlatKey, FlatField, const KEY_COUNT: usize, const PARAM_COUNT: usize>
+    VectorMap<FlatKey, FlatField, KEY_COUNT, PARAM_COUNT>
 where
-    Key: Ord + Hash + Copy,
+    FlatKey: Ord + Hash + Copy,
 {
     const fn new() -> Self {
         Self(LinearMap::new())
     }
 
-    fn get(&self, key: &Key) -> Option<&Vec<Param, PARAM_COUNT>> {
+    fn get(&self, key: &FlatKey) -> Option<&Vec<FlatField, PARAM_COUNT>> {
         self.0.get(key)
     }
 
-    pub fn get_or_create(&mut self, key: &Key) -> &mut Vec<Param, PARAM_COUNT> {
+    pub fn get_or_create(&mut self, key: &FlatKey) -> &mut Vec<FlatField, PARAM_COUNT> {
         if !self.0.contains_key(key) {
             if self.0.insert(*key, Vec::new()).is_err() {
                 panic!("Unable to insert into linear map");
@@ -52,26 +52,28 @@ where
     }
 }
 
-struct InternalMutable<Key, const PARAMETER_COUNT: usize> {
-    has_changed: Vec<Key, PARAMETER_COUNT>,
-    key_to_subscriber_map: VectorMap<Key, SubscriberIndex, PARAMETER_COUNT, SUBSCRIBER_MAX_COUNT>,
-    subscriber_to_key_map: VectorMap<SubscriberIndex, Key, SUBSCRIBER_MAX_COUNT, PARAMETER_COUNT>,
+struct InternalMutable<FlatKey, const FLAT_PARAMETER_COUNT: usize> {
+    has_changed: Vec<FlatKey, FLAT_PARAMETER_COUNT>,
+    key_to_subscriber_map:
+        VectorMap<FlatKey, SubscriberIndex, FLAT_PARAMETER_COUNT, SUBSCRIBER_MAX_COUNT>,
+    subscriber_to_key_map:
+        VectorMap<SubscriberIndex, FlatKey, SUBSCRIBER_MAX_COUNT, FLAT_PARAMETER_COUNT>,
 }
 
-pub(crate) struct SubscriberData<'a, Mutex, Key, const PARAMETER_COUNT: usize>
+pub(crate) struct SubscriberData<'a, Mutex, FlatKey, const FLAT_PARAMETER_COUNT: usize>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: Ord + Hash + Copy,
+    FlatKey: Ord + Hash + Copy,
 {
-    data: ScopedLocked<Mutex, InternalMutable<Key, PARAMETER_COUNT>>,
-    subscribers: UnsafeCell<Vec<&'a dyn Subscriber<Key>, SUBSCRIBER_MAX_COUNT>>,
+    data: ScopedLocked<Mutex, InternalMutable<FlatKey, FLAT_PARAMETER_COUNT>>,
+    subscribers: UnsafeCell<Vec<&'a dyn Subscriber<FlatKey>, SUBSCRIBER_MAX_COUNT>>,
     allow_subscribers: AtomicBool,
     has_changed: AtomicBool,
 }
 
-impl<Key, const PARAMETER_COUNT: usize> InternalMutable<Key, PARAMETER_COUNT>
+impl<FlatKey, const FLAT_PARAMETER_COUNT: usize> InternalMutable<FlatKey, FLAT_PARAMETER_COUNT>
 where
-    Key: Ord + Hash + Copy,
+    FlatKey: Ord + Hash + Copy,
 {
     const fn new() -> Self {
         Self {
@@ -82,10 +84,11 @@ where
     }
 }
 
-impl<'a, Mutex, Key, const PARAMETER_COUNT: usize> SubscriberData<'a, Mutex, Key, PARAMETER_COUNT>
+impl<'a, Mutex, FlatKey, const FLAT_PARAMETER_COUNT: usize>
+    SubscriberData<'a, Mutex, FlatKey, FLAT_PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: Ord + Hash + Copy,
+    FlatKey: Ord + Hash + Copy,
 {
     #[allow(dead_code)]
     pub(crate) const fn new() -> Self {
@@ -99,10 +102,10 @@ where
 
     fn add_subscriber_to_list(
         &self,
-        subscriber: &'a dyn Subscriber<Key>,
+        subscriber: &'a dyn Subscriber<FlatKey>,
     ) -> Result<u8, SubscriberError> {
         // Try to push a new subscriber to the subscriber list
-        let subscriber_list: &mut Vec<&'a dyn Subscriber<Key>, SUBSCRIBER_MAX_COUNT> =
+        let subscriber_list: &mut Vec<&'a dyn Subscriber<FlatKey>, SUBSCRIBER_MAX_COUNT> =
             unsafe { &mut *self.subscribers.get() };
 
         #[cfg(test)]
@@ -112,8 +115,8 @@ where
         let mut index: u8 = 0;
         for item in subscriber_list.iter() {
             if core::ptr::addr_eq(
-                subscriber as *const dyn Subscriber<Key>,
-                *item as *const dyn Subscriber<Key>,
+                subscriber as *const dyn Subscriber<FlatKey>,
+                *item as *const dyn Subscriber<FlatKey>,
             ) {
                 return Ok(index);
             }
@@ -130,7 +133,11 @@ where
         }
     }
 
-    fn map_subscriber_to_key(&self, subscriber_index: u8, key: Key) -> Result<(), SubscriberError> {
+    fn map_subscriber_to_key(
+        &self,
+        subscriber_index: u8,
+        key: FlatKey,
+    ) -> Result<(), SubscriberError> {
         let res = self.data.try_with(|data| {
             // Get or create the map from subscribers -> subscribed key
             let subscriber_to_key_vector =
@@ -161,8 +168,8 @@ where
     #[allow(dead_code)]
     pub(crate) fn subscribe(
         &self,
-        subscriber: &'a dyn Subscriber<Key>,
-        key: Key,
+        subscriber: &'a dyn Subscriber<FlatKey>,
+        key: FlatKey,
     ) -> Result<(), SubscriberError> {
         // Check if subscribing is allowed or if parameter changes already started to occur
         if self.allow_subscribers.load(Ordering::SeqCst) {
@@ -177,7 +184,7 @@ where
     }
 
     #[allow(dead_code)]
-    pub(crate) fn on_change(&self, key: Key) {
+    pub(crate) fn on_change(&self, key: FlatKey) {
         // Disallow further subscribers
         self.allow_subscribers.store(false, Ordering::SeqCst);
 
@@ -222,7 +229,7 @@ where
                 data.subscriber_to_key_map.get(subscriber_index).unwrap();
 
             // Collect all changed subscribed parameters
-            let mut changed_parameters: Vec<Key, PARAMETER_COUNT> = Vec::new();
+            let mut changed_parameters: Vec<FlatKey, FLAT_PARAMETER_COUNT> = Vec::new();
             for key in subscriber_to_key_vector.iter() {
                 if data.has_changed.contains(key) {
                     unsafe { changed_parameters.push_unchecked(*key) };
@@ -263,12 +270,12 @@ mod test {
     use crate::{
         SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
         mutex::test_mutex::Mutex,
-        test_types::test_types::{ALL_MY_DATA_KEYS, MY_DATA_PARAMETER_COUNT, MyDataKeys},
+        test_types::test_types::{ALL_MY_FLAT_KEYS, MY_DATA_PARAMETER_FLAT_COUNT, MyDataFlatKeys},
     };
 
     struct MySubscriber {
         was_notified: AtomicBool,
-        subscribed_params: Vec<MyDataKeys, 3>,
+        subscribed_params: Vec<MyDataFlatKeys, 3>,
     }
 
     impl MySubscriber {
@@ -280,8 +287,8 @@ mod test {
         }
     }
 
-    impl Subscriber<MyDataKeys> for MySubscriber {
-        fn on_change(&self, parameter_changes: &[MyDataKeys]) {
+    impl Subscriber<MyDataFlatKeys> for MySubscriber {
+        fn on_change(&self, parameter_changes: &[MyDataFlatKeys]) {
             for parameter in parameter_changes {
                 if !self.subscribed_params.contains(parameter) {
                     panic!("Got unsubscribed parameter {:?}", parameter);
@@ -292,7 +299,8 @@ mod test {
         }
     }
 
-    type MySubscriberData<'a> = SubscriberData<'a, Mutex, MyDataKeys, MY_DATA_PARAMETER_COUNT>;
+    type MySubscriberData<'a> =
+        SubscriberData<'a, Mutex, MyDataFlatKeys, MY_DATA_PARAMETER_FLAT_COUNT>;
 
     #[test]
     fn create_subscriber_data() {
@@ -305,7 +313,7 @@ mod test {
 
         let subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataKeys::Param1)
+            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
             .unwrap();
     }
 
@@ -314,15 +322,15 @@ mod test {
         let mut my_subscriber = MySubscriber::new();
         my_subscriber
             .subscribed_params
-            .push(MyDataKeys::Param1)
+            .push(MyDataFlatKeys::Param1)
             .unwrap();
 
         let subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataKeys::Param1)
+            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
             .unwrap();
 
-        subscriber_data.on_change(MyDataKeys::Param1);
+        subscriber_data.on_change(MyDataFlatKeys::Param1);
         subscriber_data.notify_subscribers();
 
         assert!(my_subscriber.was_notified.load(Ordering::SeqCst));
@@ -334,26 +342,29 @@ mod test {
 
         let mut subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataKeys::Param1)
+            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
 
         subscriber_data
-            .subscribe(&my_subscriber, MyDataKeys::Param1)
+            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
 
         subscriber_data.data.with(|data| {
-            let key_to_subscriber_vec = data.key_to_subscriber_map.get(&MyDataKeys::Param1).unwrap();
+            let key_to_subscriber_vec = data
+                .key_to_subscriber_map
+                .get(&MyDataFlatKeys::Param1)
+                .unwrap();
             let subscriber_to_key_vec = data.subscriber_to_key_map.get(&0).unwrap();
 
             assert_eq!(key_to_subscriber_vec.len(), 1);
             assert_eq!(subscriber_to_key_vec.len(), 1);
 
             assert_eq!(key_to_subscriber_vec[0], 0);
-            assert_eq!(subscriber_to_key_vec[0], MyDataKeys::Param1);
+            assert_eq!(subscriber_to_key_vec[0], MyDataFlatKeys::Param1);
         });
     }
 
@@ -363,13 +374,13 @@ mod test {
 
         let mut subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataKeys::Param1)
+            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
 
         subscriber_data
-            .subscribe(&my_subscriber, MyDataKeys::Param2)
+            .subscribe(&my_subscriber, MyDataFlatKeys::Param2)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
@@ -380,15 +391,15 @@ mod test {
         let mut my_subscriber = MySubscriber::new();
         my_subscriber
             .subscribed_params
-            .push(MyDataKeys::Param1)
+            .push(MyDataFlatKeys::Param1)
             .unwrap();
 
         let subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataKeys::Param1)
+            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
             .unwrap();
 
-        subscriber_data.on_change(MyDataKeys::Param2);
+        subscriber_data.on_change(MyDataFlatKeys::Param2);
         subscriber_data.notify_subscribers();
 
         assert!(!my_subscriber.was_notified.load(Ordering::SeqCst));
@@ -407,12 +418,12 @@ mod test {
             std::println!("Index {}", counter);
             counter += 1;
 
-            for key in ALL_MY_DATA_KEYS.iter() {
+            for key in ALL_MY_FLAT_KEYS.iter() {
                 subscriber_data.subscribe(subscriber, *key).unwrap();
             }
         }
 
-        let res = subscriber_data.subscribe(&last_subscriber, MyDataKeys::Param1);
+        let res = subscriber_data.subscribe(&last_subscriber, MyDataFlatKeys::Param1);
         assert!(matches!(res, Err(SubscriberError::Overflow)));
     }
 }
