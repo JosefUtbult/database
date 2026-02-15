@@ -81,5 +81,4 @@ pub(crate) mod test_mutex {
     impl ConstInit for Mutex {
         const INIT: Self = Self(std::sync::Mutex::new(AtomicBool::new(true)));
     }
-
 }

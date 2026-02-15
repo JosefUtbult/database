@@ -1,10 +1,11 @@
 #[cfg(test)]
 pub(crate) mod test_types {
-    use crate::{DataFieldAccessor, FocusHandler};
+
+    use database_macro::build_database;
 
     pub(crate) struct MyInnerData {
-        param4: u8,
-        param5: bool,
+        pub(crate) param4: u8,
+        pub(crate) param5: bool,
     }
 
     impl MyInnerData {
@@ -16,20 +17,42 @@ pub(crate) mod test_types {
         }
     }
 
-    pub(crate) struct MyData {
-        param1: u8,
-        param2: bool,
-        param3: u8,
-        inner1: MyInnerData,
+    pub(crate) struct MyLayerData {
+        pub(crate) param1: u8,
+        pub(crate) param2: bool,
+        pub(crate) param3: u8,
+        pub(crate) inner1: MyInnerData,
+        pub(crate) inner2: MyInnerData,
     }
 
-    impl MyData {
+    impl MyLayerData {
         pub(crate) const fn new() -> Self {
             Self {
                 param1: 0,
                 param2: false,
                 param3: 0,
                 inner1: MyInnerData::new(),
+                inner2: MyInnerData::new(),
+            }
+        }
+    }
+
+    pub(crate) struct MyFlatData {
+        pub(crate) param1: u8,
+        pub(crate) param2: bool,
+        pub(crate) param3: u8,
+        pub(crate) param4: u8,
+        pub(crate) param5: bool,
+    }
+
+    impl MyFlatData {
+        pub(crate) const fn new() -> Self {
+            Self {
+                param1: 0,
+                param2: false,
+                param3: 0,
+                param4: 0,
+                param5: false,
             }
         }
     }
@@ -64,6 +87,7 @@ pub(crate) mod test_types {
         Param2,
         Param3,
         Inner1(MyInnerDataKeys),
+        Inner2(MyInnerDataKeys),
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -73,6 +97,7 @@ pub(crate) mod test_types {
         Param2(bool),
         Param3(u8),
         Inner1(MyInnerDataFields),
+        Inner2(MyInnerDataFields),
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -85,7 +110,7 @@ pub(crate) mod test_types {
         Param5,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     pub(crate) enum MyDataFlatFields {
         Param1(u8),
         Param2(bool),
@@ -101,6 +126,7 @@ pub(crate) mod test_types {
                 MyDataAbsFields::Param2(_) => MyDataAbsKeys::Param2,
                 MyDataAbsFields::Param3(_) => MyDataAbsKeys::Param3,
                 MyDataAbsFields::Inner1(inner1) => MyDataAbsKeys::Inner1(inner1.into()),
+                MyDataAbsFields::Inner2(inner2) => MyDataAbsKeys::Inner2(inner2.into()),
             }
         }
     }
@@ -111,7 +137,7 @@ pub(crate) mod test_types {
                 MyDataAbsKeys::Param1 => MyDataFlatKeys::Param1,
                 MyDataAbsKeys::Param2 => MyDataFlatKeys::Param2,
                 MyDataAbsKeys::Param3 => MyDataFlatKeys::Param3,
-                MyDataAbsKeys::Inner1(inner1) => match inner1 {
+                MyDataAbsKeys::Inner1(inner) | MyDataAbsKeys::Inner2(inner) => match inner {
                     MyInnerDataKeys::Param4 => MyDataFlatKeys::Param4,
                     MyInnerDataKeys::Param5 => MyDataFlatKeys::Param5,
                 },
@@ -137,7 +163,7 @@ pub(crate) mod test_types {
                 MyDataAbsFields::Param1(value) => MyDataFlatFields::Param1(value),
                 MyDataAbsFields::Param2(value) => MyDataFlatFields::Param2(value),
                 MyDataAbsFields::Param3(value) => MyDataFlatFields::Param3(value),
-                MyDataAbsFields::Inner1(my_inner_data_flat_keys) => match my_inner_data_flat_keys {
+                MyDataAbsFields::Inner1(inner) | MyDataAbsFields::Inner2(inner) => match inner {
                     MyInnerDataFields::Param4(value) => MyDataFlatFields::Param4(value),
                     MyInnerDataFields::Param5(value) => MyDataFlatFields::Param5(value),
                 },
@@ -185,43 +211,44 @@ pub(crate) mod test_types {
         }
     }
 
-    impl DataFieldAccessor<MyInnerDataKeys, MyInnerDataFields> for MyInnerData {
-        fn get(&self, key: MyInnerDataKeys) -> MyInnerDataFields {
-            match key {
-                MyInnerDataKeys::Param4 => MyInnerDataFields::Param4(self.param4),
-                MyInnerDataKeys::Param5 => MyInnerDataFields::Param5(self.param5),
-            }
-        }
+    // #[derive(Folder)]
+    // #[allow(dead_code)]
+    // struct MyMacroInnerData {
+    //     param4: u8,
+    //     param5: bool,
+    // }
 
-        fn set(&mut self, field: MyInnerDataFields) {
-            match field {
-                MyInnerDataFields::Param4(value) => self.param4 = value,
-                MyInnerDataFields::Param5(value) => self.param5 = value,
-            }
-        }
-    }
+    // #[derive(Database)]
+    // #[allow(dead_code)]
+    // struct MyMacroFlatData {
+    //     param1: u8,
+    //     param2: bool,
+    //     param3: u8,
 
-    impl DataFieldAccessor<MyDataAbsKeys, MyDataAbsFields> for MyData {
-        fn get(&self, key: MyDataAbsKeys) -> MyDataAbsFields {
-            match key {
-                MyDataAbsKeys::Param1 => MyDataAbsFields::Param1(self.param1),
-                MyDataAbsKeys::Param2 => MyDataAbsFields::Param2(self.param2),
-                MyDataAbsKeys::Param3 => MyDataAbsFields::Param3(self.param3),
-                MyDataAbsKeys::Inner1(inner_key) => {
-                    MyDataAbsFields::Inner1(self.inner1.get(inner_key))
-                }
-            }
-        }
+    //     #[folder]
+    //     inner1: MyMacroInnerData,
 
-        fn set(&mut self, field: MyDataAbsFields) {
-            match field {
-                MyDataAbsFields::Param1(value) => self.param1 = value,
-                MyDataAbsFields::Param2(value) => self.param2 = value,
-                MyDataAbsFields::Param3(value) => self.param3 = value,
-                MyDataAbsFields::Inner1(inner_field) => {
-                    self.inner1.set(inner_field);
-                }
-            }
+    //     #[folder]
+    //     inner2: MyMacroInnerData,
+    // }
+
+    // flatten!([
+    //     MyMacroFlatData,
+    //     MyMacroInnerData
+    // ]);
+
+    build_database!(
+        MyMacroDatabase,
+        struct MyMacroInnerData {
+            param4: u8,
+            param5: bool,
+        },
+        struct MyMacroFlatData {
+            param1: u8,
+            param2: bool,
+            param3: u8,
+            inner1: MyMacroInnerData,
+            inner2: MyMacroInnerData,
         }
-    }
+    );
 }
