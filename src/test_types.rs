@@ -239,9 +239,13 @@ pub(crate) mod test_types {
 
     build_database!(
         MyMacroDatabase,
+        struct MyMacroInnerInnerData {
+            param6: u8,
+        },
         struct MyMacroInnerData {
             param4: u8,
             param5: bool,
+            inner3: MyMacroInnerInnerData
         },
         struct MyMacroFlatData {
             param1: u8,
