@@ -211,42 +211,19 @@ pub(crate) mod test_types {
         }
     }
 
-    // #[derive(Folder)]
-    // #[allow(dead_code)]
-    // struct MyMacroInnerData {
-    //     param4: u8,
-    //     param5: bool,
-    // }
-
-    // #[derive(Database)]
-    // #[allow(dead_code)]
-    // struct MyMacroFlatData {
-    //     param1: u8,
-    //     param2: bool,
-    //     param3: u8,
-
-    //     #[folder]
-    //     inner1: MyMacroInnerData,
-
-    //     #[folder]
-    //     inner2: MyMacroInnerData,
-    // }
-
-    // flatten!([
-    //     MyMacroFlatData,
-    //     MyMacroInnerData
-    // ]);
-
     build_database!(
         MyMacroDatabase,
+        #[allow(dead_code)]
         struct MyMacroInnerInnerData {
             param6: u8,
         },
+        #[allow(dead_code)]
         struct MyMacroInnerData {
             param4: u8,
             param5: bool,
             inner3: MyMacroInnerInnerData
         },
+        #[allow(dead_code)]
         struct MyMacroFlatData {
             param1: u8,
             param2: bool,
@@ -255,4 +232,9 @@ pub(crate) mod test_types {
             inner2: MyMacroInnerData,
         }
     );
+
+    impl MyMacroFlatData {
+        fn _test(&self) {
+        }
+    }
 }

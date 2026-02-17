@@ -4,7 +4,6 @@ mod build_absolut_enums;
 mod build_parameter_type_lists;
 
 mod build_flat_enums;
-use build_flat_enums::*;
 
 mod casing;
 use casing::*;
@@ -16,9 +15,15 @@ use core::panic;
 use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
+use quote::{format_ident, quote};
 
-use crate::{base_structs::rebuild_structs, parse_input::ParsedInput};
+use crate::{
+    base_structs::rebuild_structs,
+    build_flat_enums::{
+        build_abs_enums, build_flat_enums, build_flat_to_abs_impl, build_flattened_field_map, map_struct_inheritence
+    },
+    parse_input::ParsedInput,
+};
 
 const CRATE_NAME: &str = "database";
 
@@ -27,9 +32,10 @@ pub fn build_database(input: TokenStream) -> TokenStream {
     let parsed_input = parse_macro_input!(input as ParsedInput);
     let mut res = TokenStream2::new();
 
-    let inheritence_map = map_struct_inheritence(&parsed_input.structs);
-    eprintln!("Inheritence: {:?}", inheritence_map);
-    panic!("");
+    let (inheritence_map, root_struct_name) = map_struct_inheritence(&parsed_input.structs);
+    // eprintln!("Inheritence: {:?}", inheritence_map);
+
+    let flattened_fields = build_flattened_field_map(&parsed_input.structs);
 
     // Add back the input structs to the output stream
     {
@@ -39,13 +45,25 @@ pub fn build_database(input: TokenStream) -> TokenStream {
 
     // Build flat enums for all database fields
     {
-        let flat_enums = build_flat_enums(&parsed_input);
+        let flat_enums = build_flat_enums(&parsed_input, &flattened_fields);
         res.extend(flat_enums);
+    }
+
+    // Build abs enums for all structs
+    {
+        let abs_enums = build_abs_enums(
+            &parsed_input,
+            &root_struct_name,
+            &flattened_fields,
+            &inheritence_map,
+        );
+        res.extend(abs_enums);
     }
 
     res.into()
 }
 
+#[allow(dead_code)]
 fn get_crate_path() -> TokenStream2 {
     match crate_name(CRATE_NAME) {
         Ok(FoundCrate::Itself) => quote!(crate),
