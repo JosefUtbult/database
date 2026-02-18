@@ -1,12 +1,13 @@
 mod parse_input;
+mod data_structure;
 
-mod build_absolut_enums;
-mod build_parameter_type_lists;
+// mod build_absolut_enums;
+// mod build_parameter_type_lists;
 
-mod build_flat_enums;
+// mod build_flat_enums;
 
-mod casing;
-use casing::*;
+// mod casing;
+// use casing::*;
 use syn::parse_macro_input;
 
 mod base_structs;
@@ -15,14 +16,10 @@ use core::panic;
 use proc_macro::TokenStream;
 use proc_macro_crate::{FoundCrate, crate_name};
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{format_ident, quote};
+use quote::quote;
 
 use crate::{
-    base_structs::rebuild_structs,
-    build_flat_enums::{
-        build_abs_enums, build_flat_enums, build_flat_to_abs_impl, build_flattened_field_map, map_struct_inheritence
-    },
-    parse_input::ParsedInput,
+    data_structure::{populate_data_structure, DataStructure}, parse_input::ParsedInput
 };
 
 const CRATE_NAME: &str = "database";
@@ -30,35 +27,38 @@ const CRATE_NAME: &str = "database";
 #[proc_macro]
 pub fn build_database(input: TokenStream) -> TokenStream {
     let parsed_input = parse_macro_input!(input as ParsedInput);
-    let mut res = TokenStream2::new();
+    let res = TokenStream2::new();
 
-    let (inheritence_map, root_struct_name) = map_struct_inheritence(&parsed_input.structs);
-    // eprintln!("Inheritence: {:?}", inheritence_map);
+    let mut data_structure = DataStructure::new();
+    populate_data_structure(&mut data_structure, parsed_input);
 
-    let flattened_fields = build_flattened_field_map(&parsed_input.structs);
+//     let (inheritence_map, root_struct_name) = map_struct_inheritence(&parsed_input.structs);
+//     // eprintln!("Inheritence: {:?}", inheritence_map);
 
-    // Add back the input structs to the output stream
-    {
-        let base_structs = rebuild_structs(&parsed_input);
-        res.extend(base_structs);
-    }
+//     let flattened_fields = build_flattened_field_map(&parsed_input.structs);
 
-    // Build flat enums for all database fields
-    {
-        let flat_enums = build_flat_enums(&parsed_input, &flattened_fields);
-        res.extend(flat_enums);
-    }
+//     // Add back the input structs to the output stream
+//     {
+//         let base_structs = rebuild_structs(&parsed_input);
+//         res.extend(base_structs);
+//     }
 
-    // Build abs enums for all structs
-    {
-        let abs_enums = build_abs_enums(
-            &parsed_input,
-            &root_struct_name,
-            &flattened_fields,
-            &inheritence_map,
-        );
-        res.extend(abs_enums);
-    }
+//     // Build flat enums for all database fields
+//     {
+//         let flat_enums = build_flat_enums(&parsed_input, &flattened_fields);
+//         res.extend(flat_enums);
+//     }
+
+//     // Build abs enums for all structs
+//     {
+//         let abs_enums = build_abs_enums(
+//             &parsed_input,
+//             &root_struct_name,
+//             &flattened_fields,
+//             &inheritence_map,
+//         );
+//         res.extend(abs_enums);
+//     }
 
     res.into()
 }

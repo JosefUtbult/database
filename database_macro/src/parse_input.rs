@@ -1,8 +1,6 @@
 use proc_macro2::Ident;
 use syn::{
-    ItemStruct, Result, Token,
-    parse::{Parse, ParseStream},
-    punctuated::Punctuated,
+    parse::{Parse, ParseStream}, punctuated::Punctuated, ItemStruct, Result, Token
 };
 
 pub(crate) struct ParsedInput {

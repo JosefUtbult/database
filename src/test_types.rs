@@ -233,8 +233,8 @@ pub(crate) mod test_types {
         }
     );
 
-    impl MyMacroFlatData {
-        fn _test(&self) {
-        }
-    }
+    // impl MyMacroFlatData {
+    //     fn _test(&self) {
+    //     }
+    // }
 }
