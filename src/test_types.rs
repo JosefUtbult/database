@@ -3,6 +3,8 @@ pub(crate) mod test_types {
 
     use database_macro::build_database;
 
+    use crate::database_core::AllKeys;
+
     pub(crate) struct MyInnerData {
         pub(crate) param4: u8,
         pub(crate) param5: bool,
@@ -90,6 +92,19 @@ pub(crate) mod test_types {
         Inner2(MyInnerDataKeys),
     }
 
+    pub(crate) const MY_DATA_PARAMETER_ABS_COUNT: usize = 7;
+    impl<'a> AllKeys<MY_DATA_PARAMETER_ABS_COUNT> for MyDataAbsKeys {
+        const ALL_KEYS: [MyDataAbsKeys; MY_DATA_PARAMETER_ABS_COUNT] = [
+            MyDataAbsKeys::Param1,
+            MyDataAbsKeys::Param2,
+            MyDataAbsKeys::Param3,
+            MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4),
+            MyDataAbsKeys::Inner1(MyInnerDataKeys::Param5),
+            MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4),
+            MyDataAbsKeys::Inner2(MyInnerDataKeys::Param5),
+        ];
+    }
+
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     #[allow(dead_code)]
     pub(crate) enum MyDataAbsFields {
@@ -108,6 +123,17 @@ pub(crate) mod test_types {
         Param3,
         Param4,
         Param5,
+    }
+
+    pub(crate) const MY_DATA_PARAMETER_FLAT_COUNT: usize = 5;
+    impl<'a> AllKeys<MY_DATA_PARAMETER_FLAT_COUNT> for MyDataFlatKeys {
+        const ALL_KEYS: [MyDataFlatKeys; MY_DATA_PARAMETER_FLAT_COUNT] = [
+            MyDataFlatKeys::Param1,
+            MyDataFlatKeys::Param2,
+            MyDataFlatKeys::Param3,
+            MyDataFlatKeys::Param4,
+            MyDataFlatKeys::Param5,
+        ];
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -171,16 +197,6 @@ pub(crate) mod test_types {
         }
     }
 
-    pub(crate) const MY_DATA_PARAMETER_FLAT_COUNT: usize = 5;
-
-    pub(crate) const ALL_MY_FLAT_KEYS: [MyDataFlatKeys; MY_DATA_PARAMETER_FLAT_COUNT] = [
-        MyDataFlatKeys::Param1,
-        MyDataFlatKeys::Param2,
-        MyDataFlatKeys::Param3,
-        MyDataFlatKeys::Param4,
-        MyDataFlatKeys::Param5,
-    ];
-
     #[derive(Debug, PartialEq, Eq)]
     pub(crate) enum MyDataError {
         Invalid,
@@ -221,7 +237,7 @@ pub(crate) mod test_types {
         struct MyMacroInnerData {
             param4: u8,
             param5: bool,
-            inner3: MyMacroInnerInnerData
+            inner3: MyMacroInnerInnerData,
         },
         #[allow(dead_code)]
         struct MyMacroFlatData {

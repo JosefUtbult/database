@@ -1,11 +1,8 @@
-use core::{hash::Hash, marker::PhantomData};
+use crate::database_core::{AllKeys, DatabaseCore};
+use core::hash::Hash;
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::{
-    DataFieldAccessor, FocusHandler, SubscriberData,
-    database_internal::{DatabaseError, InternalMutable},
-    mutex::ScopedLocked,
-};
+use crate::{DataFieldAccessor, FocusHandler, database_internal::DatabaseError};
 
 pub struct LayerDatabase<
     'a,
@@ -16,18 +13,29 @@ pub struct LayerDatabase<
     AbsField,
     FlatKey,
     FlatField,
+    const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > where
-    Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: Ord + Hash + Copy + From<AbsKey>,
-    Data: DataFieldAccessor<AbsKey, AbsField>,
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
+    Mutex: ScopedRawMutex + ConstInit,
+    AbsKey: From<AbsField> + Copy + AllKeys<ABS_PARAMETER_COUNT>,
+    AbsField: Eq + PartialEq + Copy,
+    FlatKey: Ord + Hash + Copy + From<FlatField> + From<AbsKey>,
+    FlatField: Copy + Eq + PartialEq + From<AbsField>,
+    Data: DataFieldAccessor<AbsKey, AbsField>,
 {
-    data: ScopedLocked<Mutex, InternalMutable<Data, AbsKey, AbsField>>,
+    database_core: DatabaseCore<
+        'a,
+        Mutex,
+        Data,
+        AbsKey,
+        AbsField,
+        FlatKey,
+        FlatField,
+        ABS_PARAMETER_COUNT,
+        FLAT_PARAMETER_COUNT,
+    >,
     focus_handler: Focus,
-    subscribers: SubscriberData<'a, Mutex, FlatKey, FLAT_PARAMETER_COUNT>,
-    _keys: PhantomData<FlatKey>,
-    _fields: PhantomData<FlatField>,
 }
 
 impl<
@@ -39,6 +47,7 @@ impl<
     AbsField,
     FlatKey,
     FlatField,
+    const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 >
     LayerDatabase<
@@ -50,24 +59,22 @@ impl<
         AbsField,
         FlatKey,
         FlatField,
+        ABS_PARAMETER_COUNT,
         FLAT_PARAMETER_COUNT,
     >
 where
+    Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: From<AbsField> + Copy,
+    AbsKey: From<AbsField> + Copy + AllKeys<ABS_PARAMETER_COUNT>,
     AbsField: Eq + PartialEq + Copy,
     FlatKey: Ord + Hash + Copy + From<FlatField> + From<AbsKey>,
     FlatField: Copy + Eq + PartialEq + From<AbsField>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
-    Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
 {
     pub const fn new(data: Data, focus_handler: Focus) -> Self {
         Self {
-            data: ScopedLocked::new(InternalMutable::new(data)),
             focus_handler,
-            subscribers: SubscriberData::new(),
-            _keys: PhantomData,
-            _fields: PhantomData,
+            database_core: DatabaseCore::new(data),
         }
     }
 
@@ -76,13 +83,7 @@ where
     }
 
     pub fn get_absolute(&self, key: AbsKey) -> Result<FlatField, DatabaseError> {
-        match self.data.try_with(|internal| {
-            let field = internal.data.get(key);
-            field.into()
-        }) {
-            Some(field) => Ok(field),
-            None => Err(DatabaseError::LockFail),
-        }
+        self.database_core.get(key)
     }
 
     pub fn get(&self, key: FlatKey) -> Result<FlatField, DatabaseError> {
@@ -91,32 +92,9 @@ where
     }
 
     pub fn set_absolute(&self, field: AbsField) -> Result<(), DatabaseError> {
-        #[derive(PartialEq, Eq)]
-        enum SetState {
-            Updated,
-            UpToDate,
-        }
-
         let flat_field: FlatField = field.into();
         let flat_key: FlatKey = flat_field.into();
-        let abs_key = field.into();
-
-        match self.data.try_with(|internal| {
-            if internal.data.get(abs_key) != field {
-                internal.data.set(field);
-                SetState::Updated
-            } else {
-                SetState::UpToDate
-            }
-        }) {
-            None => Err(DatabaseError::LockFail),
-            Some(set_state) => {
-                if set_state == SetState::Updated {
-                    self.subscribers.on_change(flat_key);
-                }
-                Ok(())
-            }
-        }
+        self.database_core.set(flat_key, field)
     }
 
     pub fn set(&self, field: FlatField) -> Result<(), DatabaseError> {
@@ -132,8 +110,9 @@ mod test {
         mutex::test_mutex::Mutex,
         test_data_field_accessor::{InnerFocus, MyFocusHandler},
         test_types::test_types::{
-            MY_DATA_PARAMETER_FLAT_COUNT, MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields,
-            MyDataFlatKeys, MyInnerDataFields, MyInnerDataKeys, MyLayerData,
+            MY_DATA_PARAMETER_ABS_COUNT, MY_DATA_PARAMETER_FLAT_COUNT, MyDataAbsFields,
+            MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields, MyInnerDataKeys,
+            MyLayerData,
         },
     };
 
@@ -146,6 +125,7 @@ mod test {
         MyDataAbsFields,
         MyDataFlatKeys,
         MyDataFlatFields,
+        MY_DATA_PARAMETER_ABS_COUNT,
         MY_DATA_PARAMETER_FLAT_COUNT,
     >;
 
@@ -210,6 +190,7 @@ mod test {
         std::println!(
             "Database inner 1 param 4: {}. Flat res {:?}",
             database
+                .database_core
                 .data
                 .with(|internal| { internal.data.inner1.param4 }),
             res1
@@ -218,6 +199,7 @@ mod test {
         std::println!(
             "Database inner 2 param 4: {}. Flat res {:?}",
             database
+                .database_core
                 .data
                 .with(|internal| { internal.data.inner2.param4 }),
             res2

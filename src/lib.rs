@@ -3,6 +3,7 @@
 pub mod mutex;
 
 mod database_internal;
+mod database_core;
 
 mod flat_database;
 pub use flat_database::*;

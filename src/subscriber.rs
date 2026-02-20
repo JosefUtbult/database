@@ -183,8 +183,7 @@ where
         }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn on_change(&self, key: FlatKey) {
+    pub(crate) fn on_changes(&self, keys: &[FlatKey]) {
         // Disallow further subscribers
         self.allow_subscribers.store(false, Ordering::SeqCst);
 
@@ -194,12 +193,18 @@ where
 
         // Push the key to the has changed vector
         self.data.with(|data| {
-            if !data.has_changed.contains(&key) {
-                unsafe {
-                    let _ = data.has_changed.push_unchecked(key);
+            for key in keys {
+                if !data.has_changed.contains(&key) {
+                    unsafe {
+                        let _ = data.has_changed.push_unchecked(*key);
+                    }
                 }
             }
         })
+    }
+
+    pub(crate) fn on_change(&self, key: FlatKey) {
+        self.on_changes(&[key])
     }
 
     fn collect_subscribers_to_notify(&self) -> Vec<SubscriberIndex, SUBSCRIBER_MAX_COUNT> {
@@ -269,8 +274,9 @@ mod test {
 
     use crate::{
         SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
+        database_core::AllKeys,
         mutex::test_mutex::Mutex,
-        test_types::test_types::{ALL_MY_FLAT_KEYS, MY_DATA_PARAMETER_FLAT_COUNT, MyDataFlatKeys},
+        test_types::test_types::{MY_DATA_PARAMETER_FLAT_COUNT, MyDataFlatKeys},
     };
 
     struct MySubscriber {
@@ -418,7 +424,7 @@ mod test {
             std::println!("Index {}", counter);
             counter += 1;
 
-            for key in ALL_MY_FLAT_KEYS.iter() {
+            for key in MyDataFlatKeys::ALL_KEYS.iter() {
                 subscriber_data.subscribe(subscriber, *key).unwrap();
             }
         }

@@ -1,78 +1,36 @@
-use core::{hash::Hash, marker::PhantomData};
+use crate::database_core::{AllKeys, DatabaseCore};
+
+use core::hash::Hash;
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::{
-    DataFieldAccessor, SubscriberData,
-    database_internal::{DatabaseError, InternalMutable},
-    mutex::ScopedLocked,
-};
+use crate::{DataFieldAccessor, database_internal::DatabaseError};
 
-pub struct FlatDatabase<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>
+pub struct FlatDatabase<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>(
+    DatabaseCore<'a, Mutex, Data, Key, Field, Key, Field, PARAMETER_COUNT, PARAMETER_COUNT>,
+)
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: Ord + Hash + Copy,
-    Data: DataFieldAccessor<Key, Field>,
-{
-    data: ScopedLocked<Mutex, InternalMutable<Data, Key, Field>>,
-    subscribers: SubscriberData<'a, Mutex, Key, PARAMETER_COUNT>,
-    _keys: PhantomData<Key>,
-    _fields: PhantomData<Field>,
-}
+    Key: Ord + Hash + Copy + From<Field> + AllKeys<PARAMETER_COUNT>,
+    Data: DataFieldAccessor<Key, Field>;
 
-impl<'a, Mutex, Data, Key, Field, const FLAT_PARAMETER_COUNT: usize>
-    FlatDatabase<'a, Mutex, Data, Key, Field, FLAT_PARAMETER_COUNT>
+impl<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>
+    FlatDatabase<'a, Mutex, Data, Key, Field, PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: Ord + Hash + Copy + From<Field>,
-    Field: Copy + Eq + PartialEq,
+    Key: Ord + Hash + Copy + From<Field> + AllKeys<PARAMETER_COUNT>,
+    Field: Copy + Eq + PartialEq + From<Field>,
     Data: DataFieldAccessor<Key, Field>,
 {
     pub const fn new(data: Data) -> Self {
-        Self {
-            data: ScopedLocked::new(InternalMutable::new(data)),
-            subscribers: SubscriberData::new(),
-            _keys: PhantomData,
-            _fields: PhantomData,
-        }
+        Self(DatabaseCore::new(data))
     }
 
     pub fn get(&self, key: Key) -> Result<Field, DatabaseError> {
-        match self.data.try_with(|internal| {
-            let field = internal.data.get(key);
-            field.into()
-        }) {
-            Some(field) => Ok(field),
-            None => Err(DatabaseError::LockFail),
-        }
+        self.0.get(key)
     }
 
     pub fn set(&self, field: Field) -> Result<(), DatabaseError> {
-        #[derive(PartialEq, Eq)]
-        enum SetState {
-            Updated,
-            UpToDate,
-        }
-
-        let flat_field: Field = field.into();
-        let flat_key: Key = flat_field.into();
-        let abs_key = field.into();
-
-        match self.data.try_with(|internal| {
-            if internal.data.get(abs_key) != field {
-                internal.data.set(field);
-                SetState::Updated
-            } else {
-                SetState::UpToDate
-            }
-        }) {
-            None => Err(DatabaseError::LockFail),
-            Some(set_state) => {
-                if set_state == SetState::Updated {
-                    self.subscribers.on_change(flat_key);
-                }
-                Ok(())
-            }
-        }
+        self.0.set(field.into(), field)
     }
 }
 
