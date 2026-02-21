@@ -1,5 +1,6 @@
 use core::{
     cell::UnsafeCell,
+    marker::PhantomData,
     panic,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -7,7 +8,7 @@ use core::{
 use heapless::{LinearMap, Vec};
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::mutex::ScopedLocked;
+use crate::{database_traits::FlatKeyConstraints, mutex::ScopedLocked};
 
 pub trait Subscriber<Keys> {
     fn on_change(&self, parameter_changes: &[Keys]);
@@ -53,46 +54,57 @@ where
     }
 }
 
-struct InternalMutable<FlatKey, const FLAT_PARAMETER_COUNT: usize>
+struct InternalMutable<AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
 where
-    FlatKey: Eq + Clone + Copy,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
 {
     has_changed: Vec<FlatKey, FLAT_PARAMETER_COUNT>,
     key_to_subscriber_map:
         VectorMap<FlatKey, SubscriberIndex, FLAT_PARAMETER_COUNT, SUBSCRIBER_MAX_COUNT>,
     subscriber_to_key_map:
         VectorMap<SubscriberIndex, FlatKey, SUBSCRIBER_MAX_COUNT, FLAT_PARAMETER_COUNT>,
+    _abs_key: PhantomData<AbsKey>,
+    _flat_field: PhantomData<FlatField>,
 }
 
-pub(crate) struct SubscriberData<'a, Mutex, FlatKey, const FLAT_PARAMETER_COUNT: usize>
-where
+pub(crate) struct SubscriberData<
+    'a,
+    Mutex,
+    AbsKey,
+    FlatKey,
+    FlatField,
+    const FLAT_PARAMETER_COUNT: usize,
+> where
     Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: Eq + Clone + Copy,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
 {
-    data: ScopedLocked<Mutex, InternalMutable<FlatKey, FLAT_PARAMETER_COUNT>>,
+    data: ScopedLocked<Mutex, InternalMutable<AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>>,
     subscribers: UnsafeCell<Vec<&'a dyn Subscriber<FlatKey>, SUBSCRIBER_MAX_COUNT>>,
     allow_subscribers: AtomicBool,
     has_changed: AtomicBool,
 }
 
-impl<FlatKey, const FLAT_PARAMETER_COUNT: usize> InternalMutable<FlatKey, FLAT_PARAMETER_COUNT>
+impl<AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
+    InternalMutable<AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>
 where
-    FlatKey: Eq + Clone + Copy,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
 {
     const fn new() -> Self {
         Self {
             has_changed: Vec::new(),
             key_to_subscriber_map: VectorMap::new(),
             subscriber_to_key_map: VectorMap::new(),
+            _abs_key: PhantomData,
+            _flat_field: PhantomData,
         }
     }
 }
 
-impl<'a, Mutex, FlatKey, const FLAT_PARAMETER_COUNT: usize>
-    SubscriberData<'a, Mutex, FlatKey, FLAT_PARAMETER_COUNT>
+impl<'a, Mutex, AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
+    SubscriberData<'a, Mutex, AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: Eq + Clone + Copy,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
 {
     #[allow(dead_code)]
     pub(crate) const fn new() -> Self {
@@ -278,9 +290,11 @@ mod test {
 
     use crate::{
         SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
-        database_core::AllKeys,
+        database_core::AllVariants,
         mutex::test_mutex::Mutex,
-        test_types::test_types::{MY_DATA_PARAMETER_FLAT_COUNT, MyDataFlatKeys},
+        test_types::test_types::{
+            MY_DATA_FLAT_VARIANT_COUNT, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys,
+        },
     };
 
     struct MySubscriber {
@@ -309,8 +323,14 @@ mod test {
         }
     }
 
-    type MySubscriberData<'a> =
-        SubscriberData<'a, Mutex, MyDataFlatKeys, MY_DATA_PARAMETER_FLAT_COUNT>;
+    type MySubscriberData<'a> = SubscriberData<
+        'a,
+        Mutex,
+        MyDataAbsKeys,
+        MyDataFlatKeys,
+        MyDataFlatFields,
+        MY_DATA_FLAT_VARIANT_COUNT,
+    >;
 
     #[test]
     fn create_subscriber_data() {
@@ -428,7 +448,7 @@ mod test {
             std::println!("Index {}", counter);
             counter += 1;
 
-            for key in MyDataFlatKeys::ALL_KEYS.iter() {
+            for key in MyDataFlatKeys::ALL_VARIANTS.iter() {
                 subscriber_data.subscribe(subscriber, *key).unwrap();
             }
         }

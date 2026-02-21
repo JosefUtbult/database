@@ -1,5 +1,6 @@
 use crate::{
-    database_core::{AllKeys, DatabaseCore},
+    FocusHandler,
+    database_core::{DatabaseCore, DatabaseError},
     database_traits::{
         AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
         UsizeConstraints,
@@ -8,14 +9,36 @@ use crate::{
 
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::{DataFieldAccessor, database_internal::DatabaseError};
+use crate::DataFieldAccessor;
+
+struct FlatFocusHandler {}
+impl<Key, Field> FocusHandler<Key, Field, Key, Field> for FlatFocusHandler {
+    fn get_focus_key(&self, key: Key) -> Key {
+        key
+    }
+
+    fn get_focus_field(&self, field: Field) -> Field {
+        field
+    }
+}
 
 pub struct FlatDatabase<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>(
-    DatabaseCore<'a, Mutex, Data, Key, Field, Key, Field, PARAMETER_COUNT, PARAMETER_COUNT>,
+    DatabaseCore<
+        'a,
+        FlatFocusHandler,
+        Mutex,
+        Data,
+        Key,
+        Field,
+        Key,
+        Field,
+        PARAMETER_COUNT,
+        PARAMETER_COUNT,
+    >,
 )
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: AbsKeyConstraints<Field, PARAMETER_COUNT>,
+    Key: AbsKeyConstraints<Field>,
     Field: AbsFieldConstraints,
     Key: FlatKeyConstraints<Key, Field>,
     Field: FlatFieldConstraints<Field>,
@@ -26,7 +49,7 @@ impl<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>
     FlatDatabase<'a, Mutex, Data, Key, Field, PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: AbsKeyConstraints<Field, PARAMETER_COUNT>,
+    Key: AbsKeyConstraints<Field>,
     Field: AbsFieldConstraints,
     Key: FlatKeyConstraints<Key, Field>,
     Field: FlatFieldConstraints<Field>,
@@ -34,7 +57,7 @@ where
     Data: DataFieldAccessor<Key, Field>,
 {
     pub const fn new(data: Data) -> Self {
-        Self(DatabaseCore::new(data))
+        Self(DatabaseCore::new(data, FlatFocusHandler {}))
     }
 
     pub fn get(&self, key: Key) -> Result<Field, DatabaseError> {
@@ -56,7 +79,7 @@ mod test {
         FlatDatabase,
         mutex::test_mutex::Mutex,
         test_types::test_types::{
-            MY_DATA_PARAMETER_FLAT_COUNT, MyDataFlatFields, MyDataFlatKeys, MyFlatData,
+            MY_DATA_FLAT_VARIANT_COUNT, MyDataFlatFields, MyDataFlatKeys, MyFlatData,
         },
     };
 
@@ -66,7 +89,7 @@ mod test {
         MyFlatData,
         MyDataFlatKeys,
         MyDataFlatFields,
-        MY_DATA_PARAMETER_FLAT_COUNT,
+        MY_DATA_FLAT_VARIANT_COUNT,
     >;
 
     fn build_database<'a>() -> MyDatabase<'a> {

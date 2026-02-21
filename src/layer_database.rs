@@ -1,13 +1,13 @@
 use crate::{
-    database_core::{AllKeys, DatabaseCore},
+    DataFieldAccessor, FocusHandler,
+    database_core::{DatabaseCore, DatabaseError},
     database_traits::{
         AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
         UsizeConstraints,
     },
 };
-use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::{DataFieldAccessor, FocusHandler, database_internal::DatabaseError};
+use mutex_traits::{ConstInit, ScopedRawMutex};
 
 pub struct LayerDatabase<
     'a,
@@ -23,7 +23,7 @@ pub struct LayerDatabase<
 > where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints<AbsField, ABS_PARAMETER_COUNT>,
+    AbsKey: AbsKeyConstraints<AbsField>,
     AbsField: AbsFieldConstraints,
     FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
     FlatField: FlatFieldConstraints<AbsField>,
@@ -32,6 +32,7 @@ pub struct LayerDatabase<
 {
     database_core: DatabaseCore<
         'a,
+        Focus,
         Mutex,
         Data,
         AbsKey,
@@ -41,7 +42,6 @@ pub struct LayerDatabase<
         ABS_PARAMETER_COUNT,
         FLAT_PARAMETER_COUNT,
     >,
-    focus_handler: Focus,
 }
 
 impl<
@@ -71,7 +71,7 @@ impl<
 where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints<AbsField, ABS_PARAMETER_COUNT>,
+    AbsKey: AbsKeyConstraints<AbsField>,
     AbsField: AbsFieldConstraints,
     FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
     FlatField: FlatFieldConstraints<AbsField>,
@@ -80,13 +80,12 @@ where
 {
     pub const fn new(data: Data, focus_handler: Focus) -> Self {
         Self {
-            focus_handler,
-            database_core: DatabaseCore::new(data),
+            database_core: DatabaseCore::new(data, focus_handler),
         }
     }
 
     pub fn get_focus_handler(&self) -> &Focus {
-        &self.focus_handler
+        &self.database_core.focus_handler
     }
 
     pub fn get_absolute(&self, key: AbsKey) -> Result<FlatField, DatabaseError> {
@@ -94,7 +93,7 @@ where
     }
 
     pub fn get(&self, key: FlatKey) -> Result<FlatField, DatabaseError> {
-        let abs_key = self.focus_handler.get_focus_key(key);
+        let abs_key = self.database_core.focus_handler.get_focus_key(key);
         self.get_absolute(abs_key)
     }
 
@@ -105,7 +104,7 @@ where
     }
 
     pub fn set(&self, field: FlatField) -> Result<(), DatabaseError> {
-        let abs_field = self.focus_handler.get_focus_field(field);
+        let abs_field = self.database_core.focus_handler.get_focus_field(field);
         self.set_absolute(abs_field)
     }
 
@@ -121,9 +120,8 @@ mod test {
         mutex::test_mutex::Mutex,
         test_data_field_accessor::{InnerFocus, MyFocusHandler},
         test_types::test_types::{
-            MY_DATA_PARAMETER_ABS_COUNT, MY_DATA_PARAMETER_FLAT_COUNT, MyDataAbsFields,
-            MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields, MyInnerDataKeys,
-            MyLayerData,
+            MY_DATA_ABS_VARIANT_COUNT, MY_DATA_FLAT_VARIANT_COUNT, MyDataAbsFields, MyDataAbsKeys,
+            MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields, MyInnerDataKeys, MyLayerData,
         },
     };
 
@@ -136,8 +134,8 @@ mod test {
         MyDataAbsFields,
         MyDataFlatKeys,
         MyDataFlatFields,
-        MY_DATA_PARAMETER_ABS_COUNT,
-        MY_DATA_PARAMETER_FLAT_COUNT,
+        MY_DATA_ABS_VARIANT_COUNT,
+        MY_DATA_FLAT_VARIANT_COUNT,
     >;
 
     fn build_database<'a>() -> MyDatabase<'a> {

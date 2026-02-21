@@ -4,9 +4,10 @@ pub(crate) mod test_types {
     use database_macro::build_database;
 
     use crate::{
-        database_core::AllKeys,
+        database_core::{AllVariants, VariantCount},
         database_traits::{
-            AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints, UsizeConstraints,
+            AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
+            UsizeConstraints,
         },
     };
 
@@ -96,19 +97,33 @@ pub(crate) mod test_types {
         Inner1(MyInnerDataKeys),
         Inner2(MyInnerDataKeys),
     }
-    impl AbsKeyConstraints<MyDataAbsFields, MY_DATA_PARAMETER_ABS_COUNT> for MyDataAbsKeys {}
+    impl AbsKeyConstraints<MyDataAbsFields> for MyDataAbsKeys {}
 
-    pub(crate) const MY_DATA_PARAMETER_ABS_COUNT: usize = 7;
-    impl<'a> AllKeys<MY_DATA_PARAMETER_ABS_COUNT> for MyDataAbsKeys {
-        const ALL_KEYS: [MyDataAbsKeys; MY_DATA_PARAMETER_ABS_COUNT] = [
-            MyDataAbsKeys::Param1,
-            MyDataAbsKeys::Param2,
-            MyDataAbsKeys::Param3,
-            MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4),
-            MyDataAbsKeys::Inner1(MyInnerDataKeys::Param5),
-            MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4),
-            MyDataAbsKeys::Inner2(MyInnerDataKeys::Param5),
-        ];
+    enum MyDataWildcardKeys {
+        Param1,
+        Param2,
+        Param3,
+        Inner1(Option<MyInnerDataKeys>),
+        Inner2(Option<MyInnerDataKeys>),
+    }
+
+    pub(crate) const MY_DATA_ABS_VARIANT_COUNT: usize = 7;
+    pub(crate) const MY_DATA_ABS_KEYS_ALL_VARIANTS: [MyDataAbsKeys; MY_DATA_ABS_VARIANT_COUNT] = [
+        MyDataAbsKeys::Param1,
+        MyDataAbsKeys::Param2,
+        MyDataAbsKeys::Param3,
+        MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4),
+        MyDataAbsKeys::Inner1(MyInnerDataKeys::Param5),
+        MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4),
+        MyDataAbsKeys::Inner2(MyInnerDataKeys::Param5),
+    ];
+
+    impl VariantCount for MyDataAbsKeys {
+        const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
+    }
+
+    impl AllVariants for MyDataAbsKeys {
+        const ALL_VARIANTS: &[Self] = &MY_DATA_ABS_KEYS_ALL_VARIANTS;
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -122,6 +137,10 @@ pub(crate) mod test_types {
     }
     impl AbsFieldConstraints for MyDataAbsFields {}
 
+    impl VariantCount for MyDataAbsFields {
+        const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
+    }
+
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     #[allow(dead_code)]
     pub(crate) enum MyDataFlatKeys {
@@ -133,7 +152,7 @@ pub(crate) mod test_types {
     }
     impl FlatKeyConstraints<MyDataAbsKeys, MyDataFlatFields> for MyDataFlatKeys {}
     impl FlatKeyConstraints<MyDataFlatKeys, MyDataFlatFields> for MyDataFlatKeys {}
-    impl AbsKeyConstraints<MyDataFlatFields, MY_DATA_PARAMETER_FLAT_COUNT> for MyDataFlatKeys {}
+    impl AbsKeyConstraints<MyDataFlatFields> for MyDataFlatKeys {}
     impl UsizeConstraints<MyDataFlatKeys> for usize {}
 
     impl From<MyDataFlatKeys> for usize {
@@ -148,15 +167,21 @@ pub(crate) mod test_types {
         }
     }
 
-    pub(crate) const MY_DATA_PARAMETER_FLAT_COUNT: usize = 5;
-    impl<'a> AllKeys<MY_DATA_PARAMETER_FLAT_COUNT> for MyDataFlatKeys {
-        const ALL_KEYS: [MyDataFlatKeys; MY_DATA_PARAMETER_FLAT_COUNT] = [
-            MyDataFlatKeys::Param1,
-            MyDataFlatKeys::Param2,
-            MyDataFlatKeys::Param3,
-            MyDataFlatKeys::Param4,
-            MyDataFlatKeys::Param5,
-        ];
+    pub(crate) const MY_DATA_FLAT_VARIANT_COUNT: usize = 5;
+    pub(crate) const MY_DATA_FLAT_KEYS_ALL_VARIANTS: [MyDataFlatKeys; MY_DATA_FLAT_VARIANT_COUNT] = [
+        MyDataFlatKeys::Param1,
+        MyDataFlatKeys::Param2,
+        MyDataFlatKeys::Param3,
+        MyDataFlatKeys::Param4,
+        MyDataFlatKeys::Param5,
+    ];
+
+    impl VariantCount for MyDataFlatKeys {
+        const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
+    }
+
+    impl AllVariants for MyDataFlatKeys {
+        const ALL_VARIANTS: &[Self] = &MY_DATA_FLAT_KEYS_ALL_VARIANTS;
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -170,6 +195,10 @@ pub(crate) mod test_types {
     impl FlatFieldConstraints<MyDataAbsFields> for MyDataFlatFields {}
     impl FlatFieldConstraints<MyDataFlatFields> for MyDataFlatFields {}
     impl AbsFieldConstraints for MyDataFlatFields {}
+
+    impl VariantCount for MyDataFlatFields {
+        const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
+    }
 
     impl From<MyDataAbsFields> for MyDataAbsKeys {
         fn from(value: MyDataAbsFields) -> Self {
