@@ -1,5 +1,10 @@
-use crate::database_core::{AllKeys, DatabaseCore};
-use core::hash::Hash;
+use crate::{
+    database_core::{AllKeys, DatabaseCore},
+    database_traits::{
+        AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
+        UsizeConstraints,
+    },
+};
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
 use crate::{DataFieldAccessor, FocusHandler, database_internal::DatabaseError};
@@ -18,10 +23,11 @@ pub struct LayerDatabase<
 > where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: From<AbsField> + Copy + AllKeys<ABS_PARAMETER_COUNT>,
-    AbsField: Eq + PartialEq + Copy,
-    FlatKey: Ord + Hash + Copy + From<FlatField> + From<AbsKey>,
-    FlatField: Copy + Eq + PartialEq + From<AbsField>,
+    AbsKey: AbsKeyConstraints<AbsField, ABS_PARAMETER_COUNT>,
+    AbsField: AbsFieldConstraints,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatField: FlatFieldConstraints<AbsField>,
+    usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
     database_core: DatabaseCore<
@@ -65,10 +71,11 @@ impl<
 where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: From<AbsField> + Copy + AllKeys<ABS_PARAMETER_COUNT>,
-    AbsField: Eq + PartialEq + Copy,
-    FlatKey: Ord + Hash + Copy + From<FlatField> + From<AbsKey>,
-    FlatField: Copy + Eq + PartialEq + From<AbsField>,
+    AbsKey: AbsKeyConstraints<AbsField, ABS_PARAMETER_COUNT>,
+    AbsField: AbsFieldConstraints,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatField: FlatFieldConstraints<AbsField>,
+    usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
     pub const fn new(data: Data, focus_handler: Focus) -> Self {
@@ -100,6 +107,10 @@ where
     pub fn set(&self, field: FlatField) -> Result<(), DatabaseError> {
         let abs_field = self.focus_handler.get_focus_field(field);
         self.set_absolute(abs_field)
+    }
+
+    pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {
+        self.database_core.clone(&other.database_core)
     }
 }
 

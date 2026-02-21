@@ -1,9 +1,13 @@
-use core::{hash::Hash, marker::PhantomData};
+use core::marker::PhantomData;
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
 use crate::{
     DataFieldAccessor, SubscriberData,
     database_internal::{DatabaseError, InternalMutable},
+    database_traits::{
+        AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
+        UsizeConstraints,
+    },
     mutex::ScopedLocked,
 };
 
@@ -26,11 +30,25 @@ pub(crate) struct DatabaseCore<
     const FLAT_PARAMETER_COUNT: usize,
 > where
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AllKeys<ABS_PARAMETER_COUNT>,
-    FlatKey: Ord + Hash + Copy + From<AbsKey>,
+    AbsKey: AbsKeyConstraints<AbsField, ABS_PARAMETER_COUNT>,
+    AbsField: AbsFieldConstraints,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatField: FlatFieldConstraints<AbsField>,
+    usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
-    pub(crate) data: ScopedLocked<Mutex, InternalMutable<Data, AbsKey, AbsField>>,
+    pub(crate) data: ScopedLocked<
+        Mutex,
+        InternalMutable<
+            Data,
+            AbsKey,
+            AbsField,
+            FlatKey,
+            FlatField,
+            ABS_PARAMETER_COUNT,
+            FLAT_PARAMETER_COUNT,
+        >,
+    >,
     pub(crate) subscribers: SubscriberData<'a, Mutex, FlatKey, FLAT_PARAMETER_COUNT>,
     _fields: PhantomData<FlatField>,
 }
@@ -59,11 +77,11 @@ impl<
     >
 where
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AllKeys<ABS_PARAMETER_COUNT>,
-    AbsKey: From<AbsField> + Copy,
-    AbsField: Eq + PartialEq + Copy,
-    FlatKey: Ord + Hash + Copy + From<FlatField> + From<AbsKey>,
-    FlatField: Copy + Eq + PartialEq + From<AbsField>,
+    AbsKey: AbsKeyConstraints<AbsField, ABS_PARAMETER_COUNT>,
+    AbsField: AbsFieldConstraints,
+    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatField: FlatFieldConstraints<AbsField>,
+    usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
     pub(crate) const fn new(data: Data) -> Self {
@@ -108,6 +126,20 @@ where
                 }
                 Ok(())
             }
+        }
+    }
+
+    pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {
+        match self.data.try_with(|internal| {
+            other
+                .data
+                .try_with(|other_internal| internal.clone(&other_internal))
+        }) {
+            None => Err(DatabaseError::LockFail),
+            Some(changes) => match changes {
+                None => Err(DatabaseError::LockFail),
+                Some(_changes) => Ok(()),
+            },
         }
     }
 }

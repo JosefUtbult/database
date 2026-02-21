@@ -1,6 +1,5 @@
 use core::{
     cell::UnsafeCell,
-    hash::Hash,
     panic,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -26,12 +25,14 @@ pub enum SubscriberError {
 
 struct VectorMap<FlatKey, FlatField, const KEY_COUNT: usize, const PARAM_COUNT: usize>(
     LinearMap<FlatKey, Vec<FlatField, PARAM_COUNT>, KEY_COUNT>,
-);
+)
+where
+    FlatKey: Eq + Clone + Copy;
 
 impl<FlatKey, FlatField, const KEY_COUNT: usize, const PARAM_COUNT: usize>
     VectorMap<FlatKey, FlatField, KEY_COUNT, PARAM_COUNT>
 where
-    FlatKey: Ord + Hash + Copy,
+    FlatKey: Eq + Clone + Copy,
 {
     const fn new() -> Self {
         Self(LinearMap::new())
@@ -52,7 +53,10 @@ where
     }
 }
 
-struct InternalMutable<FlatKey, const FLAT_PARAMETER_COUNT: usize> {
+struct InternalMutable<FlatKey, const FLAT_PARAMETER_COUNT: usize>
+where
+    FlatKey: Eq + Clone + Copy,
+{
     has_changed: Vec<FlatKey, FLAT_PARAMETER_COUNT>,
     key_to_subscriber_map:
         VectorMap<FlatKey, SubscriberIndex, FLAT_PARAMETER_COUNT, SUBSCRIBER_MAX_COUNT>,
@@ -63,7 +67,7 @@ struct InternalMutable<FlatKey, const FLAT_PARAMETER_COUNT: usize> {
 pub(crate) struct SubscriberData<'a, Mutex, FlatKey, const FLAT_PARAMETER_COUNT: usize>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: Ord + Hash + Copy,
+    FlatKey: Eq + Clone + Copy,
 {
     data: ScopedLocked<Mutex, InternalMutable<FlatKey, FLAT_PARAMETER_COUNT>>,
     subscribers: UnsafeCell<Vec<&'a dyn Subscriber<FlatKey>, SUBSCRIBER_MAX_COUNT>>,
@@ -73,7 +77,7 @@ where
 
 impl<FlatKey, const FLAT_PARAMETER_COUNT: usize> InternalMutable<FlatKey, FLAT_PARAMETER_COUNT>
 where
-    FlatKey: Ord + Hash + Copy,
+    FlatKey: Eq + Clone + Copy,
 {
     const fn new() -> Self {
         Self {
@@ -88,7 +92,7 @@ impl<'a, Mutex, FlatKey, const FLAT_PARAMETER_COUNT: usize>
     SubscriberData<'a, Mutex, FlatKey, FLAT_PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: Ord + Hash + Copy,
+    FlatKey: Eq + Clone + Copy,
 {
     #[allow(dead_code)]
     pub(crate) const fn new() -> Self {

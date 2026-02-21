@@ -1,6 +1,11 @@
-use crate::database_core::{AllKeys, DatabaseCore};
+use crate::{
+    database_core::{AllKeys, DatabaseCore},
+    database_traits::{
+        AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
+        UsizeConstraints,
+    },
+};
 
-use core::hash::Hash;
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
 use crate::{DataFieldAccessor, database_internal::DatabaseError};
@@ -10,15 +15,22 @@ pub struct FlatDatabase<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usiz
 )
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: Ord + Hash + Copy + From<Field> + AllKeys<PARAMETER_COUNT>,
+    Key: AbsKeyConstraints<Field, PARAMETER_COUNT>,
+    Field: AbsFieldConstraints,
+    Key: FlatKeyConstraints<Key, Field>,
+    Field: FlatFieldConstraints<Field>,
+    usize: UsizeConstraints<Key>,
     Data: DataFieldAccessor<Key, Field>;
 
 impl<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>
     FlatDatabase<'a, Mutex, Data, Key, Field, PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: Ord + Hash + Copy + From<Field> + AllKeys<PARAMETER_COUNT>,
-    Field: Copy + Eq + PartialEq + From<Field>,
+    Key: AbsKeyConstraints<Field, PARAMETER_COUNT>,
+    Field: AbsFieldConstraints,
+    Key: FlatKeyConstraints<Key, Field>,
+    Field: FlatFieldConstraints<Field>,
+    usize: UsizeConstraints<Key>,
     Data: DataFieldAccessor<Key, Field>,
 {
     pub const fn new(data: Data) -> Self {
@@ -31,6 +43,10 @@ where
 
     pub fn set(&self, field: Field) -> Result<(), DatabaseError> {
         self.0.set(field.into(), field)
+    }
+
+    pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {
+        self.0.clone(&other.0)
     }
 }
 

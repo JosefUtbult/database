@@ -3,7 +3,12 @@ pub(crate) mod test_types {
 
     use database_macro::build_database;
 
-    use crate::database_core::AllKeys;
+    use crate::{
+        database_core::AllKeys,
+        database_traits::{
+            AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints, UsizeConstraints,
+        },
+    };
 
     pub(crate) struct MyInnerData {
         pub(crate) param4: u8,
@@ -91,6 +96,7 @@ pub(crate) mod test_types {
         Inner1(MyInnerDataKeys),
         Inner2(MyInnerDataKeys),
     }
+    impl AbsKeyConstraints<MyDataAbsFields, MY_DATA_PARAMETER_ABS_COUNT> for MyDataAbsKeys {}
 
     pub(crate) const MY_DATA_PARAMETER_ABS_COUNT: usize = 7;
     impl<'a> AllKeys<MY_DATA_PARAMETER_ABS_COUNT> for MyDataAbsKeys {
@@ -114,6 +120,7 @@ pub(crate) mod test_types {
         Inner1(MyInnerDataFields),
         Inner2(MyInnerDataFields),
     }
+    impl AbsFieldConstraints for MyDataAbsFields {}
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     #[allow(dead_code)]
@@ -123,6 +130,22 @@ pub(crate) mod test_types {
         Param3,
         Param4,
         Param5,
+    }
+    impl FlatKeyConstraints<MyDataAbsKeys, MyDataFlatFields> for MyDataFlatKeys {}
+    impl FlatKeyConstraints<MyDataFlatKeys, MyDataFlatFields> for MyDataFlatKeys {}
+    impl AbsKeyConstraints<MyDataFlatFields, MY_DATA_PARAMETER_FLAT_COUNT> for MyDataFlatKeys {}
+    impl UsizeConstraints<MyDataFlatKeys> for usize {}
+
+    impl From<MyDataFlatKeys> for usize {
+        fn from(value: MyDataFlatKeys) -> Self {
+            match value {
+                MyDataFlatKeys::Param1 => 0,
+                MyDataFlatKeys::Param2 => 1,
+                MyDataFlatKeys::Param3 => 2,
+                MyDataFlatKeys::Param4 => 3,
+                MyDataFlatKeys::Param5 => 4,
+            }
+        }
     }
 
     pub(crate) const MY_DATA_PARAMETER_FLAT_COUNT: usize = 5;
@@ -144,6 +167,9 @@ pub(crate) mod test_types {
         Param4(u8),
         Param5(bool),
     }
+    impl FlatFieldConstraints<MyDataAbsFields> for MyDataFlatFields {}
+    impl FlatFieldConstraints<MyDataFlatFields> for MyDataFlatFields {}
+    impl AbsFieldConstraints for MyDataFlatFields {}
 
     impl From<MyDataAbsFields> for MyDataAbsKeys {
         fn from(value: MyDataAbsFields) -> Self {

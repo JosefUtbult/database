@@ -2,6 +2,7 @@
 
 pub mod mutex;
 
+mod database_traits;
 mod database_internal;
 mod database_core;
 
