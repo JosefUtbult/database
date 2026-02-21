@@ -1,11 +1,13 @@
 #[cfg(test)]
 pub(crate) mod test_types {
 
-    use crate::database_traits::{
-        AbsFieldConstraints, AbsKeyConstraints, AllVariants, FlatFieldConstraints,
-        FlatKeyConstraints, UsizeConstraints, VariantCount,
+    use crate::{
+        ToKey,
+        database_traits::{
+            AbsFieldConstraints, AbsKeyConstraints, AllVariants, FlatFieldConstraints,
+            FlatKeyConstraints, UsizeConstraints, VariantCount,
+        },
     };
-    use database_macro::build_database;
 
     pub(crate) struct MyInnerData {
         pub(crate) param4: u8,
@@ -75,6 +77,15 @@ pub(crate) mod test_types {
         Param5(bool),
     }
 
+    impl ToKey<MyInnerDataKeys> for MyInnerDataFields {
+        fn to_key(&self) -> MyInnerDataKeys {
+            match self {
+                MyInnerDataFields::Param4(_) => MyInnerDataKeys::Param4,
+                MyInnerDataFields::Param5(_) => MyInnerDataKeys::Param5,
+            }
+        }
+    }
+
     impl From<MyInnerDataFields> for MyInnerDataKeys {
         fn from(value: MyInnerDataFields) -> Self {
             match value {
@@ -93,7 +104,7 @@ pub(crate) mod test_types {
         Inner1(MyInnerDataKeys),
         Inner2(MyInnerDataKeys),
     }
-    impl AbsKeyConstraints<MyDataAbsFields> for MyDataAbsKeys {}
+    impl AbsKeyConstraints for MyDataAbsKeys {}
 
     enum MyDataWildcardKeys {
         Param1,
@@ -131,10 +142,22 @@ pub(crate) mod test_types {
         Inner1(MyInnerDataFields),
         Inner2(MyInnerDataFields),
     }
-    impl AbsFieldConstraints for MyDataAbsFields {}
+    impl AbsFieldConstraints<MyDataAbsKeys> for MyDataAbsFields {}
 
     impl VariantCount for MyDataAbsFields {
         const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
+    }
+
+    impl ToKey<MyDataAbsKeys> for MyDataAbsFields {
+        fn to_key(&self) -> MyDataAbsKeys {
+            match self {
+                MyDataAbsFields::Param1(_) => MyDataAbsKeys::Param1,
+                MyDataAbsFields::Param2(_) => MyDataAbsKeys::Param2,
+                MyDataAbsFields::Param3(_) => MyDataAbsKeys::Param3,
+                MyDataAbsFields::Inner1(inner1) => MyDataAbsKeys::Inner1(inner1.to_key()),
+                MyDataAbsFields::Inner2(inner2) => MyDataAbsKeys::Inner2(inner2.to_key()),
+            }
+        }
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -146,9 +169,9 @@ pub(crate) mod test_types {
         Param4,
         Param5,
     }
-    impl FlatKeyConstraints<MyDataAbsKeys, MyDataFlatFields> for MyDataFlatKeys {}
-    impl FlatKeyConstraints<MyDataFlatKeys, MyDataFlatFields> for MyDataFlatKeys {}
-    impl AbsKeyConstraints<MyDataFlatFields> for MyDataFlatKeys {}
+    impl AbsKeyConstraints for MyDataFlatKeys {}
+    impl FlatKeyConstraints<MyDataAbsKeys> for MyDataFlatKeys {}
+    impl FlatKeyConstraints<MyDataFlatKeys> for MyDataFlatKeys {}
     impl UsizeConstraints<MyDataFlatKeys> for usize {}
 
     impl From<MyDataFlatKeys> for usize {
@@ -188,22 +211,22 @@ pub(crate) mod test_types {
         Param4(u8),
         Param5(bool),
     }
-    impl FlatFieldConstraints<MyDataAbsFields> for MyDataFlatFields {}
-    impl FlatFieldConstraints<MyDataFlatFields> for MyDataFlatFields {}
-    impl AbsFieldConstraints for MyDataFlatFields {}
+    impl FlatFieldConstraints<MyDataAbsFields, MyDataFlatKeys> for MyDataFlatFields {}
+    impl FlatFieldConstraints<MyDataFlatFields, MyDataFlatKeys> for MyDataFlatFields {}
+    impl AbsFieldConstraints<MyDataFlatKeys> for MyDataFlatFields {}
 
     impl VariantCount for MyDataFlatFields {
         const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
     }
 
-    impl From<MyDataAbsFields> for MyDataAbsKeys {
-        fn from(value: MyDataAbsFields) -> Self {
-            match value {
-                MyDataAbsFields::Param1(_) => MyDataAbsKeys::Param1,
-                MyDataAbsFields::Param2(_) => MyDataAbsKeys::Param2,
-                MyDataAbsFields::Param3(_) => MyDataAbsKeys::Param3,
-                MyDataAbsFields::Inner1(inner1) => MyDataAbsKeys::Inner1(inner1.into()),
-                MyDataAbsFields::Inner2(inner2) => MyDataAbsKeys::Inner2(inner2.into()),
+    impl ToKey<MyDataFlatKeys> for MyDataFlatFields {
+        fn to_key(&self) -> MyDataFlatKeys {
+            match self {
+                MyDataFlatFields::Param1(_) => MyDataFlatKeys::Param1,
+                MyDataFlatFields::Param2(_) => MyDataFlatKeys::Param2,
+                MyDataFlatFields::Param3(_) => MyDataFlatKeys::Param3,
+                MyDataFlatFields::Param4(_) => MyDataFlatKeys::Param4,
+                MyDataFlatFields::Param5(_) => MyDataFlatKeys::Param5,
             }
         }
     }
@@ -218,18 +241,6 @@ pub(crate) mod test_types {
                     MyInnerDataKeys::Param4 => MyDataFlatKeys::Param4,
                     MyInnerDataKeys::Param5 => MyDataFlatKeys::Param5,
                 },
-            }
-        }
-    }
-
-    impl From<MyDataFlatFields> for MyDataFlatKeys {
-        fn from(value: MyDataFlatFields) -> Self {
-            match value {
-                MyDataFlatFields::Param1(_) => MyDataFlatKeys::Param1,
-                MyDataFlatFields::Param2(_) => MyDataFlatKeys::Param2,
-                MyDataFlatFields::Param3(_) => MyDataFlatKeys::Param3,
-                MyDataFlatFields::Param4(_) => MyDataFlatKeys::Param4,
-                MyDataFlatFields::Param5(_) => MyDataFlatKeys::Param5,
             }
         }
     }
@@ -277,5 +288,4 @@ pub(crate) mod test_types {
             }
         }
     }
-
 }

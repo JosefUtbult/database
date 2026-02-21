@@ -63,10 +63,10 @@ pub(crate) struct InternalMutable<
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > where
-    AbsKey: AbsKeyConstraints<AbsField>,
-    AbsField: AbsFieldConstraints,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
-    FlatField: FlatFieldConstraints<AbsField>,
+    AbsKey: AbsKeyConstraints,
+    AbsField: AbsFieldConstraints<AbsKey>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
+    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
     usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
@@ -96,10 +96,10 @@ impl<
         FLAT_PARAMETER_COUNT,
     >
 where
-    AbsKey: AbsKeyConstraints<AbsField>,
-    AbsField: AbsFieldConstraints,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
-    FlatField: FlatFieldConstraints<AbsField>,
+    AbsKey: AbsKeyConstraints,
+    AbsField: AbsFieldConstraints<AbsKey>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
+    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
     usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
@@ -153,10 +153,10 @@ pub(crate) struct DatabaseCore<
 > where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints<AbsField>,
-    AbsField: AbsFieldConstraints,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
-    FlatField: FlatFieldConstraints<AbsField>,
+    AbsKey: AbsKeyConstraints,
+    AbsField: AbsFieldConstraints<AbsKey>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
+    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
     usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
@@ -205,10 +205,10 @@ impl<
 where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints<AbsField>,
-    AbsField: AbsFieldConstraints,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
-    FlatField: FlatFieldConstraints<AbsField>,
+    AbsKey: AbsKeyConstraints,
+    AbsField: AbsFieldConstraints<AbsKey>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
+    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
     usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
@@ -245,7 +245,7 @@ where
             UpToDate,
         }
 
-        let abs_key: AbsKey = abs_field.clone().into();
+        let abs_key: AbsKey = abs_field.to_key();
 
         match self.data.try_with(|internal| {
             if internal.data.get(abs_key) != abs_field {

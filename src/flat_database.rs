@@ -38,10 +38,10 @@ pub struct FlatDatabase<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usiz
 )
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: AbsKeyConstraints<Field>,
-    Field: AbsFieldConstraints,
-    Key: FlatKeyConstraints<Key, Field>,
-    Field: FlatFieldConstraints<Field>,
+    Key: AbsKeyConstraints,
+    Field: AbsFieldConstraints<Key>,
+    Key: FlatKeyConstraints<Key>,
+    Field: FlatFieldConstraints<Field, Key>,
     usize: UsizeConstraints<Key>,
     Data: DataFieldAccessor<Key, Field>;
 
@@ -49,10 +49,10 @@ impl<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>
     FlatDatabase<'a, Mutex, Data, Key, Field, PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    Key: AbsKeyConstraints<Field>,
-    Field: AbsFieldConstraints,
-    Key: FlatKeyConstraints<Key, Field>,
-    Field: FlatFieldConstraints<Field>,
+    Key: AbsKeyConstraints,
+    Field: AbsFieldConstraints<Key>,
+    Key: FlatKeyConstraints<Key>,
+    Field: FlatFieldConstraints<Field, Key>,
     usize: UsizeConstraints<Key>,
     Data: DataFieldAccessor<Key, Field>,
 {
@@ -65,7 +65,7 @@ where
     }
 
     pub fn set(&self, field: Field) -> Result<(), DatabaseError> {
-        self.0.set(field.clone().into(), field)
+        self.0.set(field.to_key(), field)
     }
 
     pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {

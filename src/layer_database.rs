@@ -23,10 +23,10 @@ pub struct LayerDatabase<
 > where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints<AbsField>,
-    AbsField: AbsFieldConstraints,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
-    FlatField: FlatFieldConstraints<AbsField>,
+    AbsKey: AbsKeyConstraints,
+    AbsField: AbsFieldConstraints<AbsKey>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
+    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
     usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
@@ -71,10 +71,10 @@ impl<
 where
     Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
     Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints<AbsField>,
-    AbsField: AbsFieldConstraints,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
-    FlatField: FlatFieldConstraints<AbsField>,
+    AbsKey: AbsKeyConstraints,
+    AbsField: AbsFieldConstraints<AbsKey>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
+    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
     usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
@@ -99,7 +99,7 @@ where
 
     pub fn set_absolute(&self, field: AbsField) -> Result<(), DatabaseError> {
         let flat_field: FlatField = field.clone().into();
-        let flat_key: FlatKey = flat_field.into();
+        let flat_key: FlatKey = flat_field.to_key();
         self.database_core.set(flat_key, field)
     }
 

@@ -56,7 +56,7 @@ where
 
 struct InternalMutable<AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
 where
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
 {
     has_changed: Vec<FlatKey, FLAT_PARAMETER_COUNT>,
     key_to_subscriber_map:
@@ -76,7 +76,7 @@ pub(crate) struct SubscriberData<
     const FLAT_PARAMETER_COUNT: usize,
 > where
     Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
 {
     data: ScopedLocked<Mutex, InternalMutable<AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>>,
     subscribers: UnsafeCell<Vec<&'a dyn Subscriber<FlatKey>, SUBSCRIBER_MAX_COUNT>>,
@@ -87,7 +87,7 @@ pub(crate) struct SubscriberData<
 impl<AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
     InternalMutable<AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>
 where
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
 {
     const fn new() -> Self {
         Self {
@@ -104,7 +104,7 @@ impl<'a, Mutex, AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
     SubscriberData<'a, Mutex, AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>
 where
     Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: FlatKeyConstraints<AbsKey, FlatField>,
+    FlatKey: FlatKeyConstraints<AbsKey>,
 {
     #[allow(dead_code)]
     pub(crate) const fn new() -> Self {
