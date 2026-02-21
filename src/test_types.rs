@@ -1,15 +1,11 @@
 #[cfg(test)]
 pub(crate) mod test_types {
 
-    use database_macro::build_database;
-
-    use crate::{
-        database_core::{AllVariants, VariantCount},
-        database_traits::{
-            AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
-            UsizeConstraints,
-        },
+    use crate::database_traits::{
+        AbsFieldConstraints, AbsKeyConstraints, AllVariants, FlatFieldConstraints,
+        FlatKeyConstraints, UsizeConstraints, VariantCount,
     };
+    use database_macro::build_database;
 
     pub(crate) struct MyInnerData {
         pub(crate) param4: u8,
@@ -282,30 +278,4 @@ pub(crate) mod test_types {
         }
     }
 
-    build_database!(
-        MyMacroDatabase,
-        #[allow(dead_code)]
-        struct MyMacroInnerInnerData {
-            param6: u8,
-        },
-        #[allow(dead_code)]
-        struct MyMacroInnerData {
-            param4: u8,
-            param5: bool,
-            inner3: MyMacroInnerInnerData,
-        },
-        #[allow(dead_code)]
-        struct MyMacroFlatData {
-            param1: u8,
-            param2: bool,
-            param3: u8,
-            inner1: MyMacroInnerData,
-            inner2: MyMacroInnerData,
-        }
-    );
-
-    // impl MyMacroFlatData {
-    //     fn _test(&self) {
-    //     }
-    // }
 }

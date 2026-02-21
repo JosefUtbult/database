@@ -212,7 +212,7 @@ where
             for key in keys {
                 if !data.has_changed.contains(&key) {
                     unsafe {
-                        let _ = data.has_changed.push_unchecked(*key);
+                        let _ = data.has_changed.push_unchecked(key.clone());
                     }
                 }
             }
@@ -290,7 +290,7 @@ mod test {
 
     use crate::{
         SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
-        database_core::AllVariants,
+        database_traits::AllVariants,
         mutex::test_mutex::Mutex,
         test_types::test_types::{
             MY_DATA_FLAT_VARIANT_COUNT, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys,

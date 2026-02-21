@@ -1,4 +1,5 @@
-pub(crate) fn to_dromedar_case(s: &str) -> String {
+#[allow(dead_code)]
+pub(crate) fn to_camel_case(s: &str) -> String {
     s.split('_')
         .map(|word| {
             let mut chars = word.chars();
@@ -11,6 +12,7 @@ pub(crate) fn to_dromedar_case(s: &str) -> String {
         .join("")
 }
 
+#[allow(dead_code)]
 pub(crate) fn to_snake_case(s: &str) -> String {
     let mut result = String::new();
 
@@ -24,6 +26,7 @@ pub(crate) fn to_snake_case(s: &str) -> String {
     result
 }
 
+#[allow(dead_code)]
 pub(crate) fn to_upper_snake_case(s: &str) -> String {
     to_snake_case(s).to_ascii_uppercase()
 }

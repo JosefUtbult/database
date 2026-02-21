@@ -16,8 +16,8 @@ pub(crate) mod data_field_accessors {
     impl DataFieldAccessor<MyInnerDataKeys, MyInnerDataFields> for MyInnerData {
         fn get(&self, key: MyInnerDataKeys) -> MyInnerDataFields {
             match key {
-                MyInnerDataKeys::Param4 => MyInnerDataFields::Param4(self.param4),
-                MyInnerDataKeys::Param5 => MyInnerDataFields::Param5(self.param5),
+                MyInnerDataKeys::Param4 => MyInnerDataFields::Param4(self.param4.clone()),
+                MyInnerDataKeys::Param5 => MyInnerDataFields::Param5(self.param5.clone()),
             }
         }
 
@@ -33,9 +33,9 @@ pub(crate) mod data_field_accessors {
         fn get(&self, key: MyDataAbsKeys) -> MyDataAbsFields {
             std::println!("Got get with abs key {:?}", key);
             match key {
-                MyDataAbsKeys::Param1 => MyDataAbsFields::Param1(self.param1),
-                MyDataAbsKeys::Param2 => MyDataAbsFields::Param2(self.param2),
-                MyDataAbsKeys::Param3 => MyDataAbsFields::Param3(self.param3),
+                MyDataAbsKeys::Param1 => MyDataAbsFields::Param1(self.param1.clone()),
+                MyDataAbsKeys::Param2 => MyDataAbsFields::Param2(self.param2.clone()),
+                MyDataAbsKeys::Param3 => MyDataAbsFields::Param3(self.param3.clone()),
                 MyDataAbsKeys::Inner1(inner_key) => {
                     MyDataAbsFields::Inner1(self.inner1.get(inner_key))
                 }
@@ -64,11 +64,11 @@ pub(crate) mod data_field_accessors {
     impl DataFieldAccessor<MyDataFlatKeys, MyDataFlatFields> for MyFlatData {
         fn get(&self, key: MyDataFlatKeys) -> MyDataFlatFields {
             match key {
-                MyDataFlatKeys::Param1 => MyDataFlatFields::Param1(self.param1),
-                MyDataFlatKeys::Param2 => MyDataFlatFields::Param2(self.param2),
-                MyDataFlatKeys::Param3 => MyDataFlatFields::Param3(self.param3),
-                MyDataFlatKeys::Param4 => MyDataFlatFields::Param4(self.param4),
-                MyDataFlatKeys::Param5 => MyDataFlatFields::Param5(self.param5),
+                MyDataFlatKeys::Param1 => MyDataFlatFields::Param1(self.param1.clone()),
+                MyDataFlatKeys::Param2 => MyDataFlatFields::Param2(self.param2.clone()),
+                MyDataFlatKeys::Param3 => MyDataFlatFields::Param3(self.param3.clone()),
+                MyDataFlatKeys::Param4 => MyDataFlatFields::Param4(self.param4.clone()),
+                MyDataFlatKeys::Param5 => MyDataFlatFields::Param5(self.param5.clone()),
             }
         }
 

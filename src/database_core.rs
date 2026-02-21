@@ -11,19 +11,6 @@ use crate::{
     mutex::ScopedLocked,
 };
 
-pub trait VariantCount {
-    const COUNT: usize;
-}
-
-pub trait AllVariants
-where
-    Self: VariantCount + Sized + 'static,
-{
-    const ALL_VARIANTS: &[Self];
-}
-
-pub trait _AllKeys {}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DatabaseError {
     LockFail,
@@ -225,10 +212,14 @@ where
     usize: UsizeConstraints<FlatKey>,
     Data: DataFieldAccessor<AbsKey, AbsField>,
 {
-    pub(crate) const fn new(data: Data, focus_handler: Focus) -> Self {
+    const _STATIC_ASSERTIONS: () = {
         assert!(ABS_PARAMETER_COUNT == AbsKey::COUNT);
         assert!(ABS_PARAMETER_COUNT == AbsField::COUNT);
+        assert!(FLAT_PARAMETER_COUNT == FlatKey::COUNT);
+        assert!(FLAT_PARAMETER_COUNT == FlatField::COUNT);
+    };
 
+    pub(crate) const fn new(data: Data, focus_handler: Focus) -> Self {
         Self {
             focus_handler,
             data: ScopedLocked::new(InternalMutable::new(data)),
@@ -254,7 +245,7 @@ where
             UpToDate,
         }
 
-        let abs_key: AbsKey = abs_field.into();
+        let abs_key: AbsKey = abs_field.clone().into();
 
         match self.data.try_with(|internal| {
             if internal.data.get(abs_key) != abs_field {

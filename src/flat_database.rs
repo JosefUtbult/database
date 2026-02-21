@@ -65,7 +65,7 @@ where
     }
 
     pub fn set(&self, field: Field) -> Result<(), DatabaseError> {
-        self.0.set(field.into(), field)
+        self.0.set(field.clone().into(), field)
     }
 
     pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {

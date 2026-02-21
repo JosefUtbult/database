@@ -98,7 +98,7 @@ where
     }
 
     pub fn set_absolute(&self, field: AbsField) -> Result<(), DatabaseError> {
-        let flat_field: FlatField = field.into();
+        let flat_field: FlatField = field.clone().into();
         let flat_key: FlatKey = flat_field.into();
         self.database_core.set(flat_key, field)
     }

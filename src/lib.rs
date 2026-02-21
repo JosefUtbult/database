@@ -3,8 +3,9 @@
 pub mod mutex;
 
 mod database_traits;
+pub use database_traits::*;
+
 mod database_core;
-mod wildcard_keys;
 
 mod flat_database;
 pub use flat_database::*;
