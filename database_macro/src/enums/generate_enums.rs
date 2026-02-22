@@ -3,8 +3,11 @@ use quote::{format_ident, quote};
 
 use crate::{
     DataStructure,
-    casing::{to_camel_case, to_upper_snake_case},
-    data_structure::{self, absolute_path::AbsolutePathField, struct_data::StructData},
+    casing::to_camel_case,
+    data_structure::{
+        absolute_path::AbsolutePathField,
+        struct_data::StructData,
+    },
 };
 
 pub(crate) fn generate_abs_enums(
@@ -12,8 +15,8 @@ pub(crate) fn generate_abs_enums(
     data_structure: &DataStructure,
     struct_data: &StructData,
 ) -> TokenStream2 {
-    let abs_key_enum = struct_data.abs_key_enum.clone();
-    let abs_field_enum = struct_data.abs_field_enum.clone();
+    let abs_key_enum = struct_data.type_names.abs_key_enum.clone();
+    let abs_field_enum = struct_data.type_names.abs_field_enum.clone();
 
     let mut abs_key_variants: Vec<TokenStream2> = Vec::new();
     let mut abs_field_variants: Vec<TokenStream2> = Vec::new();
@@ -21,8 +24,9 @@ pub(crate) fn generate_abs_enums(
     for field in struct_data.fields.iter() {
         let field_name = format_ident!("{}", to_camel_case(&field.name));
         if let Some(child_struct) = data_structure.struct_map.get(&field.ty_string) {
-            let child_struct_abs_key = format_ident!("{}", child_struct.abs_key_enum);
-            let child_struct_abs_field = format_ident!("{}", child_struct.abs_field_enum);
+            let child_struct_abs_key = format_ident!("{}", child_struct.type_names.abs_key_enum);
+            let child_struct_abs_field =
+                format_ident!("{}", child_struct.type_names.abs_field_enum);
 
             abs_key_variants.push(quote! {
                 #field_name(#child_struct_abs_key)
@@ -54,15 +58,14 @@ pub(crate) fn generate_abs_enums(
                 #(#abs_field_variants,)*
             }
         }
-    }
-    else {
+    } else {
         quote! {
-            #[derive(Eq, Clone, Ord)]
+            #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
             pub enum #abs_key_enum {
                 #(#abs_key_variants,)*
             }
 
-            #[derive(Eq, Clone)]
+            #[derive(PartialEq, Eq, Clone, Copy)]
             pub enum #abs_field_enum {
                 #(#abs_field_variants,)*
             }
@@ -74,8 +77,10 @@ pub(crate) fn generate_flat_enums(
     _crate_path: &TokenStream2,
     data_structure: &DataStructure,
 ) -> TokenStream2 {
-    let flat_key_enum = data_structure.root_struct.as_ref().unwrap().flat_key_enum.clone();
-    let flat_field_enum = data_structure.root_struct.as_ref().unwrap().flat_field_enum.clone();
+    let root_struct = data_structure.root_struct.as_ref().unwrap();
+
+    let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
+    let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
 
     let mut flat_key_variants: Vec<TokenStream2> = Vec::new();
     let mut flat_field_variants: Vec<TokenStream2> = Vec::new();
@@ -93,7 +98,9 @@ pub(crate) fn generate_flat_enums(
         let last_path = abs_path.last().unwrap();
         let field_type = match last_path {
             AbsolutePathField::Struct(_) => panic!(),
-            AbsolutePathField::NonStruct(field_data) => format_ident!("{}", field_data.ty_string.clone()),
+            AbsolutePathField::NonStruct(field_data) => {
+                format_ident!("{}", field_data.ty_string.clone())
+            }
         };
 
         flat_key_variants.push(quote! {
@@ -117,12 +124,12 @@ pub(crate) fn generate_flat_enums(
         }
     } else {
         quote! {
-            #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+            #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
             pub enum #flat_key_enum {
                 #(#flat_key_variants,)*
             }
 
-            #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+            #[derive(PartialEq, Eq, Clone, Copy)]
             pub enum #flat_field_enum {
                 #(#flat_field_variants,)*
             }

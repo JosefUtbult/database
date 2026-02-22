@@ -1,7 +1,9 @@
 mod casing;
+mod data_field_accessor;
 mod data_structure;
 mod enums;
 mod parse_input;
+mod structs;
 
 use syn::parse_macro_input;
 
@@ -12,9 +14,11 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 
 use crate::{
-    data_structure::{DataStructure, build_data_structure},
-    enums::{generate_abs_enums, generate_abs_from, generate_flat_enums, generate_flat_from},
+    data_field_accessor::generate_data_field_accessors::generate_data_field_accessors,
+    data_structure::{build_data_structure, DataStructure},
+    enums::{generate_abs_enums, generate_abs_from, generate_flat_enums, generate_flat_from, generate_impl_debug},
     parse_input::ParsedInput,
+    structs::re_add_structs::re_add_structs,
 };
 
 const CRATE_NAME: &str = "database";
@@ -22,11 +26,18 @@ const CRATE_NAME: &str = "database";
 #[proc_macro]
 pub fn build_database(input: TokenStream) -> TokenStream {
     let parsed_input = parse_macro_input!(input as ParsedInput);
+
+    let mut res = TokenStream2::new();
+    {
+        let stream = re_add_structs(&parsed_input);
+        res.extend(stream);
+    }
+
     let data_structure = build_data_structure(parsed_input);
 
     let crate_path = get_crate_path();
-    let mut res = TokenStream2::new();
-    for (_, struct_data) in data_structure.struct_map.iter() {
+    for struct_name in data_structure.struct_names.iter() {
+        let struct_data = data_structure.struct_map.get(struct_name).unwrap();
         {
             let stream = generate_abs_enums(&crate_path, &data_structure, &struct_data);
             res.extend(stream);
@@ -34,6 +45,16 @@ pub fn build_database(input: TokenStream) -> TokenStream {
 
         {
             let stream = generate_abs_from(&crate_path, &data_structure, &struct_data);
+            res.extend(stream);
+        }
+
+        {
+            let stream = generate_impl_debug(&crate_path, &data_structure, &struct_data);
+            res.extend(stream);
+        }
+
+        {
+            let stream = generate_data_field_accessors(&crate_path, &data_structure, &struct_data);
             res.extend(stream);
         }
     }

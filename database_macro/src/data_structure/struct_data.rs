@@ -30,15 +30,25 @@ impl Debug for FieldData {
 }
 
 #[derive(Clone)]
-pub(crate) struct StructData {
-    pub(crate) name: String,
+pub(crate) struct TypeNames {
     pub(crate) abs_key_enum: Ident,
     pub(crate) abs_field_enum: Ident,
     pub(crate) flat_key_enum: Ident,
     pub(crate) flat_field_enum: Ident,
+    #[allow(dead_code)]
     pub(crate) abs_count_name: Ident,
+    #[allow(dead_code)]
     pub(crate) flat_count_name: Ident,
     #[allow(dead_code)]
+    pub(crate) folder_key_name: Ident,
+    pub(crate) folder_field_name: Ident,
+    pub(crate) folder_mut_field_name: Ident,
+}
+
+#[derive(Clone)]
+pub(crate) struct StructData {
+    pub(crate) name: String,
+    pub(crate) type_names: TypeNames,
     pub(crate) ident: Ident,
     pub(crate) item: ItemStruct,
     pub(crate) fields: Vec<FieldData>,
@@ -61,19 +71,24 @@ impl PartialEq for StructData {
 
 pub(super) type StructMap = HashMap<String, StructData>;
 
-pub(super) fn populate_struct_map(struct_map: &mut StructMap, structs: Vec<ItemStruct>) {
+pub(super) fn populate_struct_map(struct_names: &mut Vec<String>, struct_map: &mut StructMap, structs: Vec<ItemStruct>) {
     let res: Vec<StructData> = structs
         .into_iter()
         .map(|item_struct| {
             let name = item_struct.ident.to_string();
             let uppercase_name = to_upper_snake_case(&name);
             StructData {
-                abs_key_enum: format_ident!("{}AbsKey", name.clone()),
-                abs_field_enum: format_ident!("{}AbsField", name.clone()),
-                flat_key_enum: format_ident!("{}Key", name.clone()),
-                flat_field_enum: format_ident!("{}Field", name.clone()),
-                abs_count_name: format_ident!("{}_ABS_COUNT", uppercase_name),
-                flat_count_name: format_ident!("{}_FLAT_COUNT", uppercase_name),
+                type_names: TypeNames {
+                    abs_key_enum: format_ident!("{}AbsKey", name.clone()),
+                    abs_field_enum: format_ident!("{}AbsField", name.clone()),
+                    flat_key_enum: format_ident!("{}Key", name.clone()),
+                    flat_field_enum: format_ident!("{}Field", name.clone()),
+                    folder_key_name: format_ident!("{}FolderKey", name.clone()),
+                    folder_field_name: format_ident!("{}FolderKey", name.clone()),
+                    folder_mut_field_name: format_ident!("{}FolderFieldMut", name.clone()),
+                    abs_count_name: format_ident!("{}_ABS_COUNT", uppercase_name),
+                    flat_count_name: format_ident!("{}_FLAT_COUNT", uppercase_name),
+                },
                 name,
                 ident: item_struct.ident.clone(),
                 item: item_struct,
@@ -87,6 +102,7 @@ pub(super) fn populate_struct_map(struct_map: &mut StructMap, structs: Vec<ItemS
 
     for item in res {
         let name = item.name.clone();
+        struct_names.push(name.clone());
         let _ = struct_map.insert(name, item);
     }
 }

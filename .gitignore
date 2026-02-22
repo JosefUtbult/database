@@ -1,7 +1,3 @@
 **/target
-
-
-# Added by cargo
-
-/target
-old/
+**/old
+examples/debug_macro_expanded.rs

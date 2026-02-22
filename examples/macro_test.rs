@@ -1,25 +1,21 @@
 use database_macro::build_database;
-
-#[derive(Debug, Clone, Copy)]
-struct MyNonCountingStruct {
-    bingo: u8,
-    bango: bool,
-    bongo: f32,
-}
+use database::{DataFieldAccessor, ToKey};
 
 build_database!(
     #[allow(dead_code)]
+    #[derive(Debug)]
     struct MyMacroInnerInnerData {
         param6: u8,
     },
     #[allow(dead_code)]
+    #[derive(Debug)]
     struct MyMacroInnerData {
         param4: u8,
         param5: bool,
         inner3: MyMacroInnerInnerData,
-        non_counting: MyNonCountingStruct,
     },
     #[allow(dead_code)]
+    #[derive(Debug)]
     struct MyMacroDatabase {
         param1: u8,
         param2: bool,
@@ -30,7 +26,7 @@ build_database!(
 );
 
 fn main() {
-    let _key = MyMacroDatabaseAbsKey::Inner1(MyMacroInnerDataAbsKey::Inner3(
-        MyMacroInnerInnerDataAbsKey::Param6,
-    ));
+    let field = MyMacroDatabaseAbsField::Inner1(MyMacroInnerDataAbsField::Inner3(MyMacroInnerInnerDataAbsField::Param6(0)));
+    let key = field.to_key();
+    println!("Key: {:?}", key);
 }
