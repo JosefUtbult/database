@@ -59,6 +59,7 @@ pub(crate) struct StructData {
     pub(crate) child_struct_to_abs_path_map: FieldToAbsPathMap,
     pub(crate) field_to_child_struct_map: FieldToChildStructMap,
     pub(crate) abs_path_count: usize,
+    pub(crate) has_debug_derive: bool,
 }
 
 impl Debug for StructData {
@@ -75,12 +76,32 @@ impl PartialEq for StructData {
 
 pub(super) type StructMap = HashMap<String, StructData>;
 
-pub(super) fn populate_struct_map(struct_names: &mut Vec<String>, struct_map: &mut StructMap, structs: Vec<ItemStruct>) {
+fn has_debug_derive(item_struct: &ItemStruct) -> bool {
+    let attrs = item_struct.clone().attrs;
+    attrs.iter().any(|attr| {
+        if attr.path.is_ident("derive") {
+            attr.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Path, syn::Token![,]>::parse_terminated,
+            )
+            .map(|paths| paths.iter().any(|p| p.is_ident("Debug")))
+            .unwrap_or(false)
+        } else {
+            false
+        }
+    })
+}
+
+pub(super) fn populate_struct_map(
+    struct_names: &mut Vec<String>,
+    struct_map: &mut StructMap,
+    structs: Vec<ItemStruct>,
+) {
     let res: Vec<StructData> = structs
         .into_iter()
         .map(|item_struct| {
             let name = item_struct.ident.to_string();
             let uppercase_name = to_upper_snake_case(&name);
+            let has_debug_derive = has_debug_derive(&item_struct);
             StructData {
                 type_names: TypeNames {
                     abs_key_enum: format_ident!("{}AbsKey", name.clone()),
@@ -100,7 +121,8 @@ pub(super) fn populate_struct_map(struct_names: &mut Vec<String>, struct_map: &m
                 field_to_abs_path_map: FieldToAbsPathMap::new(),
                 child_struct_to_abs_path_map: FieldToAbsPathMap::new(),
                 field_to_child_struct_map: FieldToChildStructMap::new(),
-                abs_path_count: 0
+                abs_path_count: 0,
+                has_debug_derive,
             }
         })
         .collect();

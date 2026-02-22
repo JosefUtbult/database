@@ -32,10 +32,21 @@ pub(crate) fn generate_impl_debug(
             Self::#field_name => write!(f, #key_string)
         });
 
-        let field_string = format!("{}::{}", abs_field_enum.to_string(), field_name.to_string());
-        field_match.push(quote! {
-            Self::#field_name(_) => write!(f, #field_string)
-        });
+        if struct_data.has_debug_derive {
+            let field_string =
+                format!("{}::{}({{:?}})", abs_field_enum.to_string(), field_name.to_string());
+
+            field_match.push(quote! {
+                Self::#field_name(value) => write!(f, #field_string, value)
+            });
+        } else {
+            let field_string =
+                format!("{}::{}", abs_field_enum.to_string(), field_name.to_string());
+
+            field_match.push(quote! {
+                Self::#field_name(_) => write!(f, #field_string)
+            });
+        }
     }
 
     // Then, child structs
