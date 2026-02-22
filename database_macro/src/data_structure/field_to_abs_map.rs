@@ -100,6 +100,8 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
             &mut field_to_abs_path_map,
         );
 
+        let mut abs_path_count = 0;
+
         // Then, filter out all paths that ends in structs
         for (field_name, abs_paths) in field_to_abs_path_map {
             if abs_paths.is_empty() {
@@ -135,10 +137,13 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
                     .child_struct_to_abs_path_map
                     .insert(field_name, non_struct_paths);
             } else if !non_struct_paths.is_empty() {
+                abs_path_count += non_struct_paths.len();
                 struct_data
                     .field_to_abs_path_map
                     .insert(field_name, non_struct_paths);
             }
         }
+
+        struct_data.abs_path_count = abs_path_count;
     }
 }

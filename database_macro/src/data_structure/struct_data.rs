@@ -41,7 +41,9 @@ pub(crate) struct TypeNames {
     pub(crate) flat_count_name: Ident,
     #[allow(dead_code)]
     pub(crate) folder_key_name: Ident,
+    #[allow(dead_code)]
     pub(crate) folder_field_name: Ident,
+    #[allow(dead_code)]
     pub(crate) folder_mut_field_name: Ident,
 }
 
@@ -49,12 +51,14 @@ pub(crate) struct TypeNames {
 pub(crate) struct StructData {
     pub(crate) name: String,
     pub(crate) type_names: TypeNames,
+    #[allow(dead_code)]
     pub(crate) ident: Ident,
     pub(crate) item: ItemStruct,
     pub(crate) fields: Vec<FieldData>,
     pub(crate) field_to_abs_path_map: FieldToAbsPathMap,
     pub(crate) child_struct_to_abs_path_map: FieldToAbsPathMap,
     pub(crate) field_to_child_struct_map: FieldToChildStructMap,
+    pub(crate) abs_path_count: usize,
 }
 
 impl Debug for StructData {
@@ -96,6 +100,7 @@ pub(super) fn populate_struct_map(struct_names: &mut Vec<String>, struct_map: &m
                 field_to_abs_path_map: FieldToAbsPathMap::new(),
                 child_struct_to_abs_path_map: FieldToAbsPathMap::new(),
                 field_to_child_struct_map: FieldToChildStructMap::new(),
+                abs_path_count: 0
             }
         })
         .collect();

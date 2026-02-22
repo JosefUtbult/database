@@ -1,5 +1,5 @@
 use database_macro::build_database;
-use database::{DataFieldAccessor, ToKey};
+use database::{DataFieldAccessor, ToKey, VariantCount, AllVariants};
 
 build_database!(
     #[allow(dead_code)]

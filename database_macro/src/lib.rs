@@ -15,8 +15,11 @@ use quote::quote;
 
 use crate::{
     data_field_accessor::generate_data_field_accessors::generate_data_field_accessors,
-    data_structure::{build_data_structure, DataStructure},
-    enums::{generate_abs_enums, generate_abs_from, generate_flat_enums, generate_flat_from, generate_impl_debug},
+    data_structure::{DataStructure, build_data_structure},
+    enums::{
+        generate_abs_enums, generate_abs_from, generate_database_constraints, generate_flat_enums,
+        generate_flat_from, generate_impl_debug,
+    },
     parse_input::ParsedInput,
     structs::re_add_structs::re_add_structs,
 };
@@ -61,6 +64,11 @@ pub fn build_database(input: TokenStream) -> TokenStream {
 
     {
         let stream = generate_flat_enums(&crate_path, &data_structure);
+        res.extend(stream);
+    }
+
+    {
+        let stream = generate_database_constraints(&crate_path, &data_structure);
         res.extend(stream);
     }
 

@@ -64,7 +64,7 @@ pub(crate) fn generate_abs_from(
 
 fn recurse_absolute_path(
     abs_path: &mut AbsolutePath,
-    field_content: &TokenStream2,
+    field_content: &Option<TokenStream2>,
 ) -> (TokenStream2, TokenStream2) {
     // Note: abs path is reversed
     if let Some(field) = abs_path.pop() {
@@ -76,8 +76,14 @@ fn recurse_absolute_path(
                     #field_name
                 };
 
-                let field_stream = quote! {
-                    #field_name(#field_content)
+                let field_stream = if let Some(field_content) = field_content {
+                    quote! {
+                        #field_name(#field_content)
+                    }
+                } else {
+                    quote! {
+                        #field_name
+                    }
                 };
 
                 (key_stream, field_stream)
@@ -107,7 +113,7 @@ fn recurse_absolute_path(
 
 pub(crate) fn abs_path_to_token_stream(
     abs_path: &AbsolutePath,
-    field_content: &TokenStream2,
+    field_content: &Option<TokenStream2>,
     abs_key_enum: &Ident,
     abs_field_enum: &Ident,
 ) -> (TokenStream2, TokenStream2) {
@@ -151,7 +157,7 @@ pub(crate) fn generate_flat_from(
             let self_ident = format_ident!("Self");
             let value_stream = quote!(value);
             let (child_key, child_field) =
-                abs_path_to_token_stream(abs_path, &value_stream, &abs_key_enum, &self_ident);
+                abs_path_to_token_stream(abs_path, &Some(value_stream), &abs_key_enum, &self_ident);
 
             abs_key_to_flat_key_match.push(quote! {
                 #child_key => Self::#field_name
