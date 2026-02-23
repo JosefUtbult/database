@@ -3,9 +3,6 @@ name = "database"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-debug_macro = ["database_macro/debug"]
-
 [dependencies]
 database_macro = { path = "./database_macro/" }
 

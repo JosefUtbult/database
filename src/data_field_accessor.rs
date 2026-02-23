@@ -1,12 +1,21 @@
+pub enum AccessorError {
+    TypeMissmatch(&'static str),
+}
+
 pub trait DataFieldAccessor<AbsKey, AbsField> {
     fn get(&self, key: AbsKey) -> AbsField;
     fn set(&mut self, field: AbsField);
 }
 
+pub trait DataFieldPartialAccessor<AbsKey, AbsField, T> {
+    fn try_get(&self, key: AbsKey) -> Result<T, AccessorError>;
+    fn try_set(&mut self, key: AbsKey, value: T) -> Result<(), AccessorError>;
+}
+
 #[cfg(test)]
 pub(crate) mod data_field_accessors {
     use crate::{
-        DataFieldAccessor,
+        AccessorError, DataFieldAccessor, DataFieldPartialAccessor,
         test_types::test_types::{
             MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyFlatData,
             MyInnerData, MyInnerDataFields, MyInnerDataKeys, MyLayerData,
@@ -25,6 +34,48 @@ pub(crate) mod data_field_accessors {
             match field {
                 MyInnerDataFields::Param4(value) => self.param4 = value,
                 MyInnerDataFields::Param5(value) => self.param5 = value,
+            }
+        }
+    }
+
+    impl DataFieldPartialAccessor<MyInnerDataKeys, MyInnerDataFields, u8> for MyInnerData {
+        fn try_get(&self, key: MyInnerDataKeys) -> Result<u8, super::AccessorError> {
+            match key {
+                MyInnerDataKeys::Param4 => Ok(self.param4.clone()),
+                _ => Err(AccessorError::TypeMissmatch("u8")),
+            }
+        }
+
+        fn try_set(&mut self, key: MyInnerDataKeys, value: u8) -> Result<(), super::AccessorError> {
+            match key {
+                MyInnerDataKeys::Param4 => {
+                    self.param4 = value;
+                    Ok(())
+                }
+                _ => Err(AccessorError::TypeMissmatch("u8")),
+            }
+        }
+    }
+
+    impl DataFieldPartialAccessor<MyInnerDataKeys, MyInnerDataFields, bool> for MyInnerData {
+        fn try_get(&self, key: MyInnerDataKeys) -> Result<bool, super::AccessorError> {
+            match key {
+                MyInnerDataKeys::Param5 => Ok(self.param5.clone()),
+                _ => Err(AccessorError::TypeMissmatch("bool")),
+            }
+        }
+
+        fn try_set(
+            &mut self,
+            key: MyInnerDataKeys,
+            value: bool,
+        ) -> Result<(), super::AccessorError> {
+            match key {
+                MyInnerDataKeys::Param5 => {
+                    self.param5 = value;
+                    Ok(())
+                }
+                _ => Err(AccessorError::TypeMissmatch("bool")),
             }
         }
     }

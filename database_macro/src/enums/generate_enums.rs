@@ -48,27 +48,17 @@ pub(crate) fn generate_abs_enums(
         }
     }
 
-    if cfg!(feature = "debug") {
-        quote! {
-            pub enum #abs_key_enum {
-                #(#abs_key_variants,)*
-            }
-
-            pub enum #abs_field_enum {
-                #(#abs_field_variants,)*
-            }
+    quote! {
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+        #[automatically_derived]
+        pub enum #abs_key_enum {
+            #(#abs_key_variants,)*
         }
-    } else {
-        quote! {
-            #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-            pub enum #abs_key_enum {
-                #(#abs_key_variants,)*
-            }
 
-            #[derive(PartialEq, Eq, Clone, Copy)]
-            pub enum #abs_field_enum {
-                #(#abs_field_variants,)*
-            }
+        #[derive(PartialEq, Eq, Clone, Copy)]
+        #[automatically_derived]
+        pub enum #abs_field_enum {
+            #(#abs_field_variants,)*
         }
     }
 }
@@ -112,27 +102,17 @@ pub(crate) fn generate_flat_enums(
         });
     }
 
-    if cfg!(feature = "debug") {
-        quote! {
-            pub enum #flat_key_enum {
-                #(#flat_key_variants,)*
-            }
-
-            pub enum #flat_field_enum {
-                #(#flat_field_variants,)*
-            }
+    quote! {
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+        #[automatically_derived]
+        pub enum #flat_key_enum {
+            #(#flat_key_variants,)*
         }
-    } else {
-        quote! {
-            #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-            pub enum #flat_key_enum {
-                #(#flat_key_variants,)*
-            }
 
-            #[derive(PartialEq, Eq, Clone, Copy)]
-            pub enum #flat_field_enum {
-                #(#flat_field_variants,)*
-            }
+        #[derive(PartialEq, Eq, Clone, Copy)]
+        #[automatically_derived]
+        pub enum #flat_field_enum {
+            #(#flat_field_variants,)*
         }
     }
 }

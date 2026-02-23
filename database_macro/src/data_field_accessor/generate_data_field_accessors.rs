@@ -1,10 +1,7 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 
-use crate::{
-    DataStructure, casing::to_camel_case, data_structure::struct_data::StructData,
-    enums::abs_path_to_token_stream,
-};
+use crate::{DataStructure, casing::to_camel_case, data_structure::struct_data::StructData};
 
 pub(crate) fn generate_data_field_accessors(
     crate_path: &TokenStream2,

@@ -1,7 +1,9 @@
 mod casing;
 mod data_field_accessor;
 mod data_structure;
+mod database;
 mod enums;
+mod focus_handler;
 mod parse_input;
 mod structs;
 
@@ -14,14 +16,11 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 
 use crate::{
-    data_field_accessor::generate_data_field_accessors::generate_data_field_accessors,
-    data_structure::{DataStructure, build_data_structure},
-    enums::{
-        generate_abs_enums, generate_abs_from, generate_database_constraints, generate_flat_enums,
-        generate_flat_from, generate_impl_debug,
-    },
-    parse_input::ParsedInput,
-    structs::re_add_structs::re_add_structs,
+    data_field_accessor::generate_data_field_accessors::generate_data_field_accessors, data_structure::{build_data_structure, DataStructure}, database::generate_database::generate_database, enums::{
+        generate_abs_enums, generate_abs_from, generate_abs_impl_debug,
+        generate_database_constraints, generate_flat_enums, generate_flat_from,
+        generate_flat_impl_debug,
+    }, focus_handler::generate_focus_handler, parse_input::ParsedInput, structs::re_add_structs::re_add_structs
 };
 
 const CRATE_NAME: &str = "database";
@@ -52,7 +51,7 @@ pub fn build_database(input: TokenStream) -> TokenStream {
         }
 
         {
-            let stream = generate_impl_debug(&crate_path, &data_structure, &struct_data);
+            let stream = generate_abs_impl_debug(&crate_path, &data_structure, &struct_data);
             res.extend(stream);
         }
 
@@ -68,12 +67,27 @@ pub fn build_database(input: TokenStream) -> TokenStream {
     }
 
     {
+        let stream = generate_flat_impl_debug(&crate_path, &data_structure);
+        res.extend(stream);
+    }
+
+    {
         let stream = generate_database_constraints(&crate_path, &data_structure);
         res.extend(stream);
     }
 
     {
         let stream = generate_flat_from(&crate_path, &data_structure);
+        res.extend(stream);
+    }
+
+    {
+        let stream = generate_focus_handler(&crate_path, &data_structure);
+        res.extend(stream);
+    }
+
+    {
+        let stream = generate_database(&crate_path, &data_structure);
         res.extend(stream);
     }
 

@@ -1,5 +1,9 @@
 use database_macro::build_database;
-use database::{DataFieldAccessor, ToKey, VariantCount, AllVariants};
+
+use database::{
+    AbsFieldConstraints, AbsKeyConstraints, AllVariants, DataFieldAccessor, FlatFieldConstraints,
+    FlatKeyConstraints, FocusHandler, LayerDatabase, ToKey, VariantCount,
+};
 
 build_database!(
     #[allow(dead_code)]
@@ -26,7 +30,9 @@ build_database!(
 );
 
 fn main() {
-    let field = MyMacroDatabaseAbsField::Inner1(MyMacroInnerDataAbsField::Inner3(MyMacroInnerInnerDataAbsField::Param6(0)));
+    let field = MyMacroDatabaseAbsField::Inner1(MyMacroInnerDataAbsField::Inner3(
+        MyMacroInnerInnerDataAbsField::Param6(0),
+    ));
     let key = field.to_key();
-    println!("Key: {:?}", key);
+    println!("Key: {:?}, Field: {:?}", key, field);
 }

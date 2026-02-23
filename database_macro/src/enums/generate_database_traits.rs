@@ -2,7 +2,10 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 
 use crate::{
-    casing::{to_camel_case, to_upper_snake_case}, data_structure, enums::abs_path_to_token_stream, DataStructure
+    DataStructure,
+    casing::{to_camel_case, to_upper_snake_case},
+    data_structure,
+    enums::abs_path_to_token_stream,
 };
 
 fn generate_variant_count(
@@ -17,24 +20,35 @@ fn generate_variant_count(
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
 
+    let abs_count_name = root_struct.type_names.abs_count_name.clone();
+    let flat_count_name = root_struct.type_names.flat_count_name.clone();
+
     let abs_count = root_struct.abs_path_count;
     let flat_count = root_struct.field_to_abs_path_map.len();
 
     quote! {
+        pub const #abs_count_name: usize = #abs_count;
+
+        pub const #flat_count_name: usize = #flat_count;
+
+        #[automatically_derived]
         impl #crate_path::VariantCount for #abs_key_enum {
-            const COUNT: usize = #abs_count;
+            const COUNT: usize = #abs_count_name;
         }
 
+        #[automatically_derived]
         impl #crate_path::VariantCount for #abs_field_enum {
-            const COUNT: usize = #abs_count;
+            const COUNT: usize = #abs_count_name;
         }
 
+        #[automatically_derived]
         impl #crate_path::VariantCount for #flat_field_enum {
-            const COUNT: usize = #flat_count;
+            const COUNT: usize = #flat_count_name;
         }
 
+        #[automatically_derived]
         impl #crate_path::VariantCount for #flat_key_enum {
-            const COUNT: usize = #flat_count;
+            const COUNT: usize = #flat_count_name;
         }
     }
 }
@@ -68,6 +82,7 @@ fn generate_all_variants(
             #(#all_keys,)*
         ];
 
+        #[automatically_derived]
         impl #crate_path::AllVariants for #abs_key_enum {
             const ALL_VARIANTS: &[Self] = &#abs_key_list_name;
         }
@@ -93,6 +108,7 @@ fn generate_from_flat_key_to_usize(
     }
 
     quote! {
+        #[automatically_derived]
         impl From<#flat_key_enum> for usize {
             fn from(value: #flat_key_enum) -> Self {
                 match value {
@@ -115,6 +131,13 @@ fn generate_database_traits(
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
 
     quote! {
+        #[automatically_derived]
+        impl #crate_path::AbsKeyConstraints for #abs_key_enum {}
+        #[automatically_derived]
+        impl #crate_path::AbsFieldConstraints<#abs_key_enum> for #abs_field_enum {}
+        #[automatically_derived]
+        impl #crate_path::FlatKeyConstraints<#abs_key_enum> for #flat_key_enum {}
+        #[automatically_derived]
         impl #crate_path::FlatFieldConstraints<#abs_field_enum, #flat_key_enum> for #flat_field_enum {}
     }
 }
@@ -127,5 +150,6 @@ pub(crate) fn generate_database_constraints(
     res.extend(generate_variant_count(crate_path, data_structure));
     res.extend(generate_all_variants(crate_path, data_structure));
     res.extend(generate_from_flat_key_to_usize(crate_path, data_structure));
+    res.extend(generate_database_traits(crate_path, data_structure));
     res
 }

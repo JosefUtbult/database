@@ -35,9 +35,7 @@ pub(crate) struct TypeNames {
     pub(crate) abs_field_enum: Ident,
     pub(crate) flat_key_enum: Ident,
     pub(crate) flat_field_enum: Ident,
-    #[allow(dead_code)]
     pub(crate) abs_count_name: Ident,
-    #[allow(dead_code)]
     pub(crate) flat_count_name: Ident,
     #[allow(dead_code)]
     pub(crate) folder_key_name: Ident,

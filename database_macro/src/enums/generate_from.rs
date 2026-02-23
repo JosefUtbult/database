@@ -52,6 +52,7 @@ pub(crate) fn generate_abs_from(
     }
 
     quote! {
+        #[automatically_derived]
         impl #crate_path::ToKey<#abs_key_enum> for #abs_field_enum {
             fn to_key(&self) -> #abs_key_enum {
                 match &self {
@@ -82,7 +83,7 @@ fn recurse_absolute_path(
                     }
                 } else {
                     quote! {
-                        #field_name
+                        #field_name(_)
                     }
                 };
 
@@ -91,7 +92,7 @@ fn recurse_absolute_path(
             AbsolutePathField::Struct((field_name, struct_data)) => {
                 let field_name = format_ident!("{}", to_camel_case(&field_name));
                 let struct_key_enum = struct_data.type_names.abs_key_enum.clone();
-                let struct_field_enum = struct_data.type_names.abs_key_enum.clone();
+                let struct_field_enum = struct_data.type_names.abs_field_enum.clone();
 
                 let (child_keys, child_fields) = recurse_absolute_path(abs_path, field_content);
 
@@ -139,6 +140,7 @@ pub(crate) fn generate_flat_from(
     let root_struct = data_structure.root_struct.as_ref().unwrap();
 
     let abs_key_enum = root_struct.type_names.abs_key_enum.clone();
+    let abs_field_enum = root_struct.type_names.abs_field_enum.clone();
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
 
@@ -154,22 +156,26 @@ pub(crate) fn generate_flat_from(
         });
 
         for abs_path in abs_paths.iter() {
-            let self_ident = format_ident!("Self");
             let value_stream = quote!(value);
-            let (child_key, child_field) =
-                abs_path_to_token_stream(abs_path, &Some(value_stream), &abs_key_enum, &self_ident);
+            let (child_key, child_field) = abs_path_to_token_stream(
+                abs_path,
+                &Some(value_stream),
+                &abs_key_enum,
+                &abs_field_enum,
+            );
 
             abs_key_to_flat_key_match.push(quote! {
                 #child_key => Self::#field_name
             });
 
             abs_field_to_flat_field_match.push(quote! {
-                #child_field => #flat_field_enum::#field_name(value)
+                #child_field => Self::#field_name(value)
             });
         }
     }
 
     quote! {
+        #[automatically_derived]
         impl #crate_path::ToKey<#flat_key_enum> for #flat_field_enum {
             fn to_key(&self) -> #flat_key_enum {
                 match self {
@@ -178,10 +184,20 @@ pub(crate) fn generate_flat_from(
             }
         }
 
+        #[automatically_derived]
         impl From<#abs_key_enum> for #flat_key_enum {
-            fn from(value: #abs_key_enum) -> Self {
-                match value {
+            fn from(key: #abs_key_enum) -> Self {
+                match key {
                     #(#abs_key_to_flat_key_match,)*
+                }
+            }
+        }
+
+        #[automatically_derived]
+        impl From<#abs_field_enum> for #flat_field_enum {
+            fn from(field: #abs_field_enum) -> Self {
+                match field {
+                    #(#abs_field_to_flat_field_match,)*
                 }
             }
         }

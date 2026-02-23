@@ -3,7 +3,7 @@ use quote::{format_ident, quote};
 
 use crate::{DataStructure, casing::to_camel_case, data_structure::struct_data::StructData};
 
-pub(crate) fn generate_impl_debug(
+pub(crate) fn generate_abs_impl_debug(
     _crate_path: &TokenStream2,
     _data_structure: &DataStructure,
     struct_data: &StructData,
@@ -76,6 +76,7 @@ pub(crate) fn generate_impl_debug(
     }
 
     quote! {
+        #[automatically_derived]
         impl core::fmt::Debug for #abs_key_enum {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
@@ -84,7 +85,65 @@ pub(crate) fn generate_impl_debug(
             }
         }
 
+        #[automatically_derived]
         impl core::fmt::Debug for #abs_field_enum {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    #(#field_match,)*
+                }
+            }
+        }
+    }
+}
+
+pub(crate) fn generate_flat_impl_debug(
+    _crate_path: &TokenStream2,
+    data_structure: &DataStructure,
+) -> TokenStream2 {
+    let root_struct = data_structure.root_struct.as_ref().unwrap();
+    let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
+    let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
+
+    let mut key_match: Vec<TokenStream2> = Vec::new();
+    let mut field_match: Vec<TokenStream2> = Vec::new();
+
+    for (field, abs_paths) in root_struct.field_to_abs_path_map.iter() {
+        let field_name = format_ident!("{}", to_camel_case(&field));
+
+        let key_string = format!("{}::{}", flat_key_enum.to_string(), field_name.to_string());
+        key_match.push(quote! {
+            Self::#field_name => write!(f, #key_string)
+        });
+
+        if data_structure.all_structs_has_debug_derive {
+            let field_string =
+                format!("{}::{}({{:?}})", flat_field_enum.to_string(), field_name.to_string());
+
+            field_match.push(quote! {
+                Self::#field_name(value) => write!(f, #field_string, value)
+            });
+        } else {
+            let field_string =
+                format!("{}::{}", flat_field_enum.to_string(), field_name.to_string());
+
+            field_match.push(quote! {
+                Self::#field_name(_) => write!(f, #field_string)
+            });
+        }
+    }
+
+    quote! {
+        #[automatically_derived]
+        impl core::fmt::Debug for #flat_key_enum{
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
+                match self {
+                    #(#key_match,)*
+                }
+            }
+        }
+
+        #[automatically_derived]
+        impl core::fmt::Debug for #flat_field_enum {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
                     #(#field_match,)*
