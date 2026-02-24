@@ -11,8 +11,7 @@ pub(super) fn build_struct_fields<'a>(struct_data: &mut StructMap) {
                     let field = FieldData {
                         name: field_ident.to_string(),
                         ident: field_ident.clone(),
-                        ty_string: field.ty.clone().to_token_stream().to_string(),
-                        ty: field.ty.clone(),
+                        ty_string: field.ty.to_token_stream().to_string(),
                     };
 
                     struct_data.fields.push(field);

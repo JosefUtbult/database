@@ -10,6 +10,8 @@ build_database!(
     #[derive(Debug)]
     struct MyMacroInnerInnerData {
         param6: u8,
+        param7: u8,
+        param8: u8,
     },
     #[allow(dead_code)]
     #[derive(Debug)]
@@ -17,6 +19,7 @@ build_database!(
         param4: u8,
         param5: bool,
         inner3: MyMacroInnerInnerData,
+        inner4: MyMacroInnerInnerData,
     },
     #[allow(dead_code)]
     #[derive(Debug)]
@@ -26,6 +29,7 @@ build_database!(
         param3: u8,
         inner1: MyMacroInnerData,
         inner2: MyMacroInnerData,
+        inner5: MyMacroInnerInnerData,
     }
 );
 

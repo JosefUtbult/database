@@ -1,26 +1,16 @@
-use std::{collections::HashMap, fmt::Debug, panic, vec::Vec};
+use crate::{casing::to_camel_case, data_structure::{self, conditional_paths::{build_conditional_paths, ConditionalFieldInfo}}, ParsedInput};
 use proc_macro2::Ident;
 use quote::format_ident;
-use crate::{casing::to_camel_case, data_structure, ParsedInput};
+use std::{collections::HashMap, fmt::Debug, panic, vec::Vec};
 
 use super::{
     absolute_path::{AbsolutePath, AbsolutePathField},
     build_struct_fields::build_struct_fields,
-    field_to_abs_map::FieldToAbsPathMap,
     field_to_abs_map::build_field_to_abs_path_map,
     field_to_child_struct_map::field_to_child_struct_map,
     find_root_struct::find_root_struct,
     struct_data::{StructData, StructMap, populate_struct_map},
 };
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub(crate) struct ConditionalPath {
-    name: String,
-    path: AbsolutePath,
-}
-
-pub(crate) type ConditionalFieldToAbsPathMap = HashMap<String, Vec<ConditionalPath>>;
 
 pub(crate) struct TypeNames {
     pub(crate) database_name: Ident,
@@ -33,7 +23,7 @@ pub(crate) struct DataStructure {
     pub(crate) root_struct: Option<StructData>,
     pub(crate) type_names: Option<TypeNames>,
     #[allow(dead_code)]
-    pub(crate) conditional_field_to_abs_path_map: ConditionalFieldToAbsPathMap,
+    pub(crate) conditional_field_info: ConditionalFieldInfo,
     pub(crate) all_structs_has_debug_derive: bool,
 }
 
@@ -44,13 +34,12 @@ impl DataStructure {
             struct_names: Vec::new(),
             root_struct: None,
             type_names: None,
-            conditional_field_to_abs_path_map: ConditionalFieldToAbsPathMap::new(),
+            conditional_field_info: ConditionalFieldInfo::new(),
             all_structs_has_debug_derive: false,
         }
     }
 }
 
-#[allow(dead_code)]
 fn find_differing_field(lhs: &AbsolutePath, rhs: &AbsolutePath) -> (String, String) {
     for lhs_field in lhs.iter().rev() {
         match lhs_field {
@@ -71,41 +60,6 @@ fn find_differing_field(lhs: &AbsolutePath, rhs: &AbsolutePath) -> (String, Stri
     }
 
     panic!("Unable to find differing parameter name");
-}
-
-#[allow(dead_code)]
-fn build_conditional_field_to_abs_path_map(
-    conditional_field_to_abs_path_map: &mut ConditionalFieldToAbsPathMap,
-    field_to_abs_path_map: &FieldToAbsPathMap,
-) {
-    for (field_name, field_paths) in field_to_abs_path_map {
-        if field_paths.len() <= 1 {
-            continue;
-        }
-
-        let mut conditional_paths: Vec<ConditionalPath> = Vec::new();
-        let first_path = field_paths.first().unwrap().clone();
-        for path in &field_paths[1..] {
-            let (first_differing_field, second_differing_field) =
-                find_differing_field(&first_path, path);
-
-            if conditional_paths.is_empty() {
-                conditional_paths.push(ConditionalPath {
-                    name: first_differing_field,
-                    path: first_path.clone(),
-                });
-            }
-
-            conditional_paths.push(ConditionalPath {
-                name: second_differing_field,
-                path: path.clone(),
-            });
-        }
-
-        conditional_field_to_abs_path_map.insert(field_name.clone(), conditional_paths);
-    }
-
-    eprintln!("Conditional paths: {:?}", conditional_field_to_abs_path_map);
 }
 
 fn check_all_structs_has_debug(data_structure: &mut DataStructure) {
@@ -159,10 +113,7 @@ pub(crate) fn build_data_structure(parsed_input: ParsedInput) -> DataStructure {
     get_type_names(&mut data_structure);
 
     // Build the map field name -> conditional field path
-    // build_conditional_field_to_abs_path_map(
-    //     &mut data_structure.conditional_field_to_abs_path_map,
-    //     &data_structure.field_to_abs_path_map_vector,
-    // );
+    build_conditional_paths(&mut data_structure);
 
     data_structure
 }

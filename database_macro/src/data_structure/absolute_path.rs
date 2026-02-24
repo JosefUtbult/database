@@ -2,10 +2,23 @@ use std::fmt::Debug;
 
 use super::struct_data::{FieldData, StructData};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) enum AbsolutePathField {
     NonStruct(FieldData),
     Struct((String, StructData)),
+}
+
+impl AbsolutePathField {
+    pub(crate) fn name_type_pair(&self) -> (String, String) {
+        match self {
+            AbsolutePathField::NonStruct(field_data) => {
+                (field_data.name.clone(), field_data.ty_string.clone())
+            }
+            AbsolutePathField::Struct((field_name, struct_data)) => {
+                (field_name.clone(), struct_data.name.clone())
+            }
+        }
+    }
 }
 
 impl Debug for AbsolutePathField {
@@ -30,4 +43,3 @@ impl Debug for AbsolutePathField {
 }
 
 pub(crate) type AbsolutePath = Vec<AbsolutePathField>;
-
