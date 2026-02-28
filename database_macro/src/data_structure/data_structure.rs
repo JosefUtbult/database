@@ -1,4 +1,11 @@
-use crate::{casing::to_camel_case, data_structure::{self, conditional_paths::{build_conditional_paths, ConditionalFieldInfo}}, ParsedInput};
+use crate::{
+    ParsedInput,
+    casing::to_camel_case,
+    data_structure::{
+        self,
+        conditional_paths::{AllFolderFields, FolderFocusPathMap, build_conditional_paths},
+    },
+};
 use proc_macro2::Ident;
 use quote::format_ident;
 use std::{collections::HashMap, fmt::Debug, panic, vec::Vec};
@@ -22,9 +29,9 @@ pub(crate) struct DataStructure {
     pub(crate) struct_names: Vec<String>,
     pub(crate) root_struct: Option<StructData>,
     pub(crate) type_names: Option<TypeNames>,
-    #[allow(dead_code)]
-    pub(crate) conditional_field_info: ConditionalFieldInfo,
     pub(crate) all_structs_has_debug_derive: bool,
+    pub(crate) folder_focus_path_map: FolderFocusPathMap,
+    pub(crate) all_folder_fields: AllFolderFields,
 }
 
 impl DataStructure {
@@ -34,32 +41,11 @@ impl DataStructure {
             struct_names: Vec::new(),
             root_struct: None,
             type_names: None,
-            conditional_field_info: ConditionalFieldInfo::new(),
             all_structs_has_debug_derive: false,
+            folder_focus_path_map: FolderFocusPathMap::new(),
+            all_folder_fields: AllFolderFields::new()
         }
     }
-}
-
-fn find_differing_field(lhs: &AbsolutePath, rhs: &AbsolutePath) -> (String, String) {
-    for lhs_field in lhs.iter().rev() {
-        match lhs_field {
-            AbsolutePathField::NonStruct(_) => {}
-            AbsolutePathField::Struct((lhs_field_name, lhs_struct_data)) => {
-                for rhs_field in rhs.iter().rev() {
-                    match rhs_field {
-                        AbsolutePathField::NonStruct(_) => {}
-                        AbsolutePathField::Struct((rhs_field_name, rhs_struct_data)) => {
-                            if lhs_struct_data.name == rhs_struct_data.name {
-                                return (lhs_field_name.clone(), rhs_field_name.clone());
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    panic!("Unable to find differing parameter name");
 }
 
 fn check_all_structs_has_debug(data_structure: &mut DataStructure) {

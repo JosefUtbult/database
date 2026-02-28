@@ -6,37 +6,23 @@ use database::{
 };
 
 build_database!(
-    #[allow(dead_code)]
-    #[derive(Debug)]
-    struct MyMacroInnerInnerData {
-        param6: u8,
-        param7: u8,
-        param8: u8,
+    struct C {
+        my_field: u8,
     },
-    #[allow(dead_code)]
-    #[derive(Debug)]
-    struct MyMacroInnerData {
-        param4: u8,
-        param5: bool,
-        inner3: MyMacroInnerInnerData,
-        inner4: MyMacroInnerInnerData,
+    struct B {
+        c6: C,
+        c7: C,
     },
-    #[allow(dead_code)]
-    #[derive(Debug)]
-    struct MyMacroDatabase {
-        param1: u8,
-        param2: bool,
-        param3: u8,
-        inner1: MyMacroInnerData,
-        inner2: MyMacroInnerData,
-        inner5: MyMacroInnerInnerData,
+    struct A {
+        b4: B,
+        c5: C,
+    },
+    struct Root {
+        c1: C,
+        a2: A,
+        a3: A,
+        b8: B,
     }
 );
 
-fn main() {
-    let field = MyMacroDatabaseAbsField::Inner1(MyMacroInnerDataAbsField::Inner3(
-        MyMacroInnerInnerDataAbsField::Param6(0),
-    ));
-    let key = field.to_key();
-    println!("Key: {:?}, Field: {:?}", key, field);
-}
+fn main() {}
