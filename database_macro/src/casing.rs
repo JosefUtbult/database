@@ -30,4 +30,3 @@ pub(crate) fn to_snake_case(s: &str) -> String {
 pub(crate) fn to_upper_snake_case(s: &str) -> String {
     to_snake_case(s).to_ascii_uppercase()
 }
-

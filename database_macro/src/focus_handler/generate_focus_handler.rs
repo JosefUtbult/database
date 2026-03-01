@@ -3,11 +3,17 @@ use quote::{format_ident, quote};
 
 use crate::DataStructure;
 
-fn generate_folder_enums(_crate_path: &TokenStream2, _data_structure: &DataStructure) -> TokenStream2 {
+fn generate_folder_enums(
+    _crate_path: &TokenStream2,
+    _data_structure: &DataStructure,
+) -> TokenStream2 {
     quote! {}
 }
 
-fn generate_focus_enums(_crate_path: &TokenStream2, data_structure: &DataStructure) -> TokenStream2 {
+fn generate_focus_enums(
+    _crate_path: &TokenStream2,
+    data_structure: &DataStructure,
+) -> TokenStream2 {
     let mut result = TokenStream2::new();
 
     for (_, folder_info) in data_structure.all_folder_fields.iter() {

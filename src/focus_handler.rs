@@ -13,10 +13,12 @@ pub(crate) mod test_data_field_accessor {
     use core::cell::RefCell;
 
     use crate::{
-        test::MyDatabaseDescription, test_types::test_types::{
+        FocusHandler,
+        test::MyDatabaseDescription,
+        test_types::test_types::{
             MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields,
             MyInnerDataKeys,
-        }, FocusHandler
+        },
     };
 
     #[derive(Clone, Copy, Debug)]
@@ -43,9 +45,7 @@ pub(crate) mod test_data_field_accessor {
         }
     }
 
-    impl FocusHandler<MyDatabaseDescription>
-        for MyFocusHandler
-    {
+    impl FocusHandler<MyDatabaseDescription> for MyFocusHandler {
         fn get_focus_key(&self, key: MyDataFlatKeys) -> MyDataAbsKeys {
             let inner_focus = *self.inner_focus.lock().unwrap().borrow();
             let abs_key = match key {

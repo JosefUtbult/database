@@ -1,6 +1,6 @@
+use super::struct_data::{FieldData, StructMap};
 use core::panic;
 use quote::ToTokens;
-use super::struct_data::{FieldData, StructMap};
 
 pub(super) fn build_struct_fields<'a>(struct_data: &mut StructMap) {
     for (_, struct_data) in struct_data.iter_mut() {
@@ -21,4 +21,3 @@ pub(super) fn build_struct_fields<'a>(struct_data: &mut StructMap) {
         }
     }
 }
-

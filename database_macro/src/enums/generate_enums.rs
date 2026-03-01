@@ -28,7 +28,8 @@ pub(crate) fn generate_abs_enums(
             let child_struct_abs_key = format_ident!("{}", child_struct.type_names.abs_key_enum);
             let child_struct_abs_field =
                 format_ident!("{}", child_struct.type_names.abs_field_enum);
-            let child_struct_abs_folder = format_ident!("{}", child_struct.type_names.abs_folder_enum);
+            let child_struct_abs_folder =
+                format_ident!("{}", child_struct.type_names.abs_folder_enum);
 
             abs_key_variants.push(quote! {
                 #field_name(#child_struct_abs_key)
