@@ -1,6 +1,5 @@
 use core::{
     cell::UnsafeCell,
-    marker::PhantomData,
     panic,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -8,7 +7,7 @@ use core::{
 use heapless::{LinearMap, Vec};
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::{database_traits::FlatKeyConstraints, mutex::ScopedLocked};
+use crate::{DatabaseDescription, UsizeConstraints, mutex::ScopedLocked};
 
 pub trait Subscriber<Keys> {
     fn on_change(&self, parameter_changes: &[Keys]);
@@ -54,57 +53,53 @@ where
     }
 }
 
-struct InternalMutable<AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
+struct InternalMutable<Database: DatabaseDescription, const FLAT_PARAMETER_COUNT: usize>
 where
-    FlatKey: FlatKeyConstraints<AbsKey>,
+    usize: UsizeConstraints<Database::FlatKey>,
 {
-    has_changed: Vec<FlatKey, FLAT_PARAMETER_COUNT>,
+    has_changed: Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>,
     key_to_subscriber_map:
-        VectorMap<FlatKey, SubscriberIndex, FLAT_PARAMETER_COUNT, SUBSCRIBER_MAX_COUNT>,
+        VectorMap<Database::FlatKey, SubscriberIndex, FLAT_PARAMETER_COUNT, SUBSCRIBER_MAX_COUNT>,
     subscriber_to_key_map:
-        VectorMap<SubscriberIndex, FlatKey, SUBSCRIBER_MAX_COUNT, FLAT_PARAMETER_COUNT>,
-    _abs_key: PhantomData<AbsKey>,
-    _flat_field: PhantomData<FlatField>,
+        VectorMap<SubscriberIndex, Database::FlatKey, SUBSCRIBER_MAX_COUNT, FLAT_PARAMETER_COUNT>,
 }
 
 pub(crate) struct SubscriberData<
     'a,
-    Mutex,
-    AbsKey,
-    FlatKey,
-    FlatField,
+    Mutex: ScopedRawMutex + ConstInit,
+    Database: DatabaseDescription,
     const FLAT_PARAMETER_COUNT: usize,
 > where
-    Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: FlatKeyConstraints<AbsKey>,
+    usize: UsizeConstraints<Database::FlatKey>,
 {
-    data: ScopedLocked<Mutex, InternalMutable<AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>>,
-    subscribers: UnsafeCell<Vec<&'a dyn Subscriber<FlatKey>, SUBSCRIBER_MAX_COUNT>>,
+    data: ScopedLocked<Mutex, InternalMutable<Database, FLAT_PARAMETER_COUNT>>,
+    subscribers: UnsafeCell<Vec<&'a dyn Subscriber<Database::FlatKey>, SUBSCRIBER_MAX_COUNT>>,
     allow_subscribers: AtomicBool,
     has_changed: AtomicBool,
 }
 
-impl<AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
-    InternalMutable<AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>
+impl<Database: DatabaseDescription, const FLAT_PARAMETER_COUNT: usize>
+    InternalMutable<Database, FLAT_PARAMETER_COUNT>
 where
-    FlatKey: FlatKeyConstraints<AbsKey>,
+    usize: UsizeConstraints<Database::FlatKey>,
 {
     const fn new() -> Self {
         Self {
             has_changed: Vec::new(),
             key_to_subscriber_map: VectorMap::new(),
             subscriber_to_key_map: VectorMap::new(),
-            _abs_key: PhantomData,
-            _flat_field: PhantomData,
         }
     }
 }
 
-impl<'a, Mutex, AbsKey, FlatKey, FlatField, const FLAT_PARAMETER_COUNT: usize>
-    SubscriberData<'a, Mutex, AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>
-where
+impl<
+    'a,
     Mutex: ScopedRawMutex + ConstInit,
-    FlatKey: FlatKeyConstraints<AbsKey>,
+    Database: DatabaseDescription,
+    const FLAT_PARAMETER_COUNT: usize,
+> SubscriberData<'a, Mutex, Database, FLAT_PARAMETER_COUNT>
+where
+    usize: UsizeConstraints<Database::FlatKey>,
 {
     #[allow(dead_code)]
     pub(crate) const fn new() -> Self {
@@ -118,10 +113,10 @@ where
 
     fn add_subscriber_to_list(
         &self,
-        subscriber: &'a dyn Subscriber<FlatKey>,
+        subscriber: &'a dyn Subscriber<Database::FlatKey>,
     ) -> Result<u8, SubscriberError> {
         // Try to push a new subscriber to the subscriber list
-        let subscriber_list: &mut Vec<&'a dyn Subscriber<FlatKey>, SUBSCRIBER_MAX_COUNT> =
+        let subscriber_list: &mut Vec<&'a dyn Subscriber<Database::FlatKey>, SUBSCRIBER_MAX_COUNT> =
             unsafe { &mut *self.subscribers.get() };
 
         #[cfg(test)]
@@ -131,8 +126,8 @@ where
         let mut index: u8 = 0;
         for item in subscriber_list.iter() {
             if core::ptr::addr_eq(
-                subscriber as *const dyn Subscriber<FlatKey>,
-                *item as *const dyn Subscriber<FlatKey>,
+                subscriber as *const dyn Subscriber<Database::FlatKey>,
+                *item as *const dyn Subscriber<Database::FlatKey>,
             ) {
                 return Ok(index);
             }
@@ -152,7 +147,7 @@ where
     fn map_subscriber_to_key(
         &self,
         subscriber_index: u8,
-        key: FlatKey,
+        key: Database::FlatKey,
     ) -> Result<(), SubscriberError> {
         let res = self.data.try_with(|data| {
             // Get or create the map from subscribers -> subscribed key
@@ -184,8 +179,8 @@ where
     #[allow(dead_code)]
     pub(crate) fn subscribe(
         &self,
-        subscriber: &'a dyn Subscriber<FlatKey>,
-        key: FlatKey,
+        subscriber: &'a dyn Subscriber<Database::FlatKey>,
+        key: Database::FlatKey,
     ) -> Result<(), SubscriberError> {
         // Check if subscribing is allowed or if parameter changes already started to occur
         if self.allow_subscribers.load(Ordering::SeqCst) {
@@ -199,7 +194,7 @@ where
         }
     }
 
-    pub(crate) fn on_changes(&self, keys: &[FlatKey]) {
+    pub(crate) fn on_changes(&self, keys: &[Database::FlatKey]) {
         // Disallow further subscribers
         self.allow_subscribers.store(false, Ordering::SeqCst);
 
@@ -219,7 +214,7 @@ where
         })
     }
 
-    pub(crate) fn on_change(&self, key: FlatKey) {
+    pub(crate) fn on_change(&self, key: Database::FlatKey) {
         self.on_changes(&[key])
     }
 
@@ -250,7 +245,7 @@ where
                 data.subscriber_to_key_map.get(subscriber_index).unwrap();
 
             // Collect all changed subscribed parameters
-            let mut changed_parameters: Vec<FlatKey, FLAT_PARAMETER_COUNT> = Vec::new();
+            let mut changed_parameters: Vec<Database::FlatKey, FLAT_PARAMETER_COUNT> = Vec::new();
             for key in subscriber_to_key_vector.iter() {
                 if data.has_changed.contains(key) {
                     unsafe { changed_parameters.push_unchecked(*key) };
@@ -292,9 +287,8 @@ mod test {
         SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
         database_traits::AllVariants,
         mutex::test_mutex::Mutex,
-        test_types::test_types::{
-            MY_DATA_FLAT_VARIANT_COUNT, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys,
-        },
+        test::MyDatabaseDescription,
+        test_types::test_types::{MY_DATA_FLAT_VARIANT_COUNT, MyDataFlatKeys},
     };
 
     struct MySubscriber {
@@ -323,14 +317,8 @@ mod test {
         }
     }
 
-    type MySubscriberData<'a> = SubscriberData<
-        'a,
-        Mutex,
-        MyDataAbsKeys,
-        MyDataFlatKeys,
-        MyDataFlatFields,
-        MY_DATA_FLAT_VARIANT_COUNT,
-    >;
+    type MySubscriberData<'a> =
+        SubscriberData<'a, Mutex, MyDatabaseDescription, MY_DATA_FLAT_VARIANT_COUNT>;
 
     #[test]
     fn create_subscriber_data() {

@@ -1,17 +1,15 @@
 use crate::{
     ParsedInput,
     casing::to_camel_case,
-    data_structure::{
-        self,
-        conditional_paths::{AllFolderFields, FolderFocusPathMap, build_conditional_paths},
+    data_structure::conditional_paths::{
+        AllFolderFields, FolderFocusPathMap, build_conditional_paths,
     },
 };
 use proc_macro2::Ident;
 use quote::format_ident;
-use std::{collections::HashMap, fmt::Debug, panic, vec::Vec};
+use std::vec::Vec;
 
 use super::{
-    absolute_path::{AbsolutePath, AbsolutePathField},
     build_struct_fields::build_struct_fields,
     field_to_abs_map::build_field_to_abs_path_map,
     field_to_child_struct_map::field_to_child_struct_map,
@@ -43,7 +41,7 @@ impl DataStructure {
             type_names: None,
             all_structs_has_debug_derive: false,
             folder_focus_path_map: FolderFocusPathMap::new(),
-            all_folder_fields: AllFolderFields::new()
+            all_folder_fields: AllFolderFields::new(),
         }
     }
 }

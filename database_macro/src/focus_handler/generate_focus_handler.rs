@@ -11,6 +11,10 @@ fn generate_focus_enums(_crate_path: &TokenStream2, data_structure: &DataStructu
     let mut result = TokenStream2::new();
 
     for (_, folder_info) in data_structure.all_folder_fields.iter() {
+        if folder_info.fields.len() <= 1 {
+            continue;
+        }
+
         let folder_key_enum = folder_info.folder_enum_name.clone();
 
         let mut folder_key_variants: Vec<Ident> = Vec::new();
@@ -32,9 +36,8 @@ fn generate_focus_enums(_crate_path: &TokenStream2, data_structure: &DataStructu
             });
         }
 
+        // #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
         result.extend(quote! {
-            #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-            #[automatically_derived]
             pub enum #folder_key_enum {
                 #(#folder_key_variants,)*
             }
@@ -86,6 +89,10 @@ fn generate_handler_declaration(
     let mut folder_key_declarations: Vec<TokenStream2> = Vec::new();
 
     for (_, folder_info) in data_structure.all_folder_fields.iter() {
+        if folder_info.fields.len() <= 1 {
+            continue;
+        }
+
         let folder_key_enum = folder_info.folder_enum_name.clone();
         let folder_focus_variable = folder_info.folder_focus_variable.clone();
 
@@ -123,6 +130,10 @@ fn generate_handler_declaration(
 fn generate_new(_crate_path: &TokenStream2, data_structure: &DataStructure) -> TokenStream2 {
     let mut folder_key_definitions: Vec<TokenStream2> = Vec::new();
     for (_, folder_info) in data_structure.all_folder_fields.iter() {
+        if folder_info.fields.len() <= 1 {
+            continue;
+        }
+
         let folder_key_enum = folder_info.folder_enum_name.clone();
         let folder_focus_variable = folder_info.folder_focus_variable.clone();
 
@@ -151,6 +162,10 @@ fn generate_get_set(_crate_path: &TokenStream2, data_structure: &DataStructure) 
     let mut get_set_focused_key_functions: Vec<TokenStream2> = Vec::new();
 
     for (_, folder_info) in data_structure.all_folder_fields.iter() {
+        if folder_info.fields.len() <= 1 {
+            continue;
+        }
+
         let folder_key_enum = folder_info.folder_enum_name.clone();
         let folder_focus_variable = folder_info.folder_focus_variable.clone();
         let get_function_name = format_ident!("get_{}", folder_focus_variable);

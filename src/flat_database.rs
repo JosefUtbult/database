@@ -1,70 +1,58 @@
 use crate::{
-    FocusHandler,
+    DatabaseDescription, FlatDatabaseDescription, FocusHandler,
     database_core::{DatabaseCore, DatabaseError},
-    database_traits::{
-        AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
-        UsizeConstraints,
-    },
+    database_traits::{ToKey, UsizeConstraints},
 };
 
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::DataFieldAccessor;
-
 struct FlatFocusHandler {}
-impl<Key, Field> FocusHandler<Key, Field, Key, Field> for FlatFocusHandler {
-    fn get_focus_key(&self, key: Key) -> Key {
+impl<Database: FlatDatabaseDescription> FocusHandler<Database> for FlatFocusHandler
+where
+    usize: UsizeConstraints<Database::Key>,
+{
+    fn get_focus_key(
+        &self,
+        key: <Database as DatabaseDescription>::FlatKey,
+    ) -> <Database as DatabaseDescription>::AbsKey {
         key
     }
 
-    fn get_focus_field(&self, field: Field) -> Field {
+    fn get_focus_field(
+        &self,
+        field: <Database as DatabaseDescription>::FlatField,
+    ) -> <Database as DatabaseDescription>::AbsField {
         field
     }
 }
 
-pub struct FlatDatabase<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>(
-    DatabaseCore<
-        'a,
-        FlatFocusHandler,
-        Mutex,
-        Data,
-        Key,
-        Field,
-        Key,
-        Field,
-        PARAMETER_COUNT,
-        PARAMETER_COUNT,
-    >,
-)
-where
+pub struct FlatDatabase<
+    'a,
     Mutex: ScopedRawMutex + ConstInit,
-    Key: AbsKeyConstraints,
-    Field: AbsFieldConstraints<Key>,
-    Key: FlatKeyConstraints<Key>,
-    Field: FlatFieldConstraints<Field, Key>,
-    usize: UsizeConstraints<Key>,
-    Data: DataFieldAccessor<Key, Field>;
+    Database: FlatDatabaseDescription,
+    const PARAMETER_COUNT: usize,
+>(DatabaseCore<'a, FlatFocusHandler, Mutex, Database, PARAMETER_COUNT, PARAMETER_COUNT>)
+where
+    usize: UsizeConstraints<Database::Key>;
 
-impl<'a, Mutex, Data, Key, Field, const PARAMETER_COUNT: usize>
-    FlatDatabase<'a, Mutex, Data, Key, Field, PARAMETER_COUNT>
-where
+impl<
+    'a,
     Mutex: ScopedRawMutex + ConstInit,
-    Key: AbsKeyConstraints,
-    Field: AbsFieldConstraints<Key>,
-    Key: FlatKeyConstraints<Key>,
-    Field: FlatFieldConstraints<Field, Key>,
-    usize: UsizeConstraints<Key>,
-    Data: DataFieldAccessor<Key, Field>,
+    Database: FlatDatabaseDescription,
+    const PARAMETER_COUNT: usize,
+> FlatDatabase<'a, Mutex, Database, PARAMETER_COUNT>
+where
+    usize: UsizeConstraints<Database::Key>,
 {
-    pub const fn new(data: Data) -> Self {
+    pub const fn new(data: Database::Data) -> Self {
         Self(DatabaseCore::new(data, FlatFocusHandler {}))
     }
 
-    pub fn get(&self, key: Key) -> Result<Field, DatabaseError> {
+    pub fn get(&self, key: Database::Key) -> Result<Database::Field, DatabaseError> {
         self.0.get(key)
     }
 
-    pub fn set(&self, field: Field) -> Result<(), DatabaseError> {
+    pub fn set(&self, field: Database::Field) -> Result<(), DatabaseError> {
         self.0.set(field.to_key(), field)
     }
 
@@ -76,21 +64,24 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        FlatDatabase,
+        FlatDatabase, FlatDatabaseDescription,
         mutex::test_mutex::Mutex,
         test_types::test_types::{
-            MY_DATA_FLAT_VARIANT_COUNT, MyDataFlatFields, MyDataFlatKeys, MyFlatData,
+            MY_DATA_FLAT_VARIANT_COUNT, MyDataFlatFields, MyDataFlatFolders, MyDataFlatKeys,
+            MyFlatData,
         },
     };
 
-    type MyDatabase<'a> = FlatDatabase<
-        'a,
-        Mutex,
-        MyFlatData,
-        MyDataFlatKeys,
-        MyDataFlatFields,
-        MY_DATA_FLAT_VARIANT_COUNT,
-    >;
+    struct MyDatabaseDescription {}
+    impl FlatDatabaseDescription for MyDatabaseDescription {
+        type Key = MyDataFlatKeys;
+        type Field = MyDataFlatFields;
+        type Folder = MyDataFlatFolders;
+        type Data = MyFlatData;
+    }
+
+    type MyDatabase<'a> =
+        FlatDatabase<'a, Mutex, MyDatabaseDescription, MY_DATA_FLAT_VARIANT_COUNT>;
 
     fn build_database<'a>() -> MyDatabase<'a> {
         MyDatabase::new(MyFlatData::new())

@@ -1,13 +1,12 @@
+use core::panic;
+
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 
 use crate::{
     DataStructure,
     casing::to_camel_case,
-    data_structure::{
-        absolute_path::AbsolutePathField,
-        struct_data::StructData,
-    },
+    data_structure::{absolute_path::AbsolutePathField, struct_data::StructData},
 };
 
 pub(crate) fn generate_abs_enums(
@@ -17,9 +16,11 @@ pub(crate) fn generate_abs_enums(
 ) -> TokenStream2 {
     let abs_key_enum = struct_data.type_names.abs_key_enum.clone();
     let abs_field_enum = struct_data.type_names.abs_field_enum.clone();
+    let abs_folder_enum = struct_data.type_names.abs_folder_enum.clone();
 
     let mut abs_key_variants: Vec<TokenStream2> = Vec::new();
     let mut abs_field_variants: Vec<TokenStream2> = Vec::new();
+    let mut abs_folder_variants: Vec<TokenStream2> = Vec::new();
 
     for field in struct_data.fields.iter() {
         let field_name = format_ident!("{}", to_camel_case(&field.name));
@@ -27,6 +28,7 @@ pub(crate) fn generate_abs_enums(
             let child_struct_abs_key = format_ident!("{}", child_struct.type_names.abs_key_enum);
             let child_struct_abs_field =
                 format_ident!("{}", child_struct.type_names.abs_field_enum);
+            let child_struct_abs_folder = format_ident!("{}", child_struct.type_names.abs_folder_enum);
 
             abs_key_variants.push(quote! {
                 #field_name(#child_struct_abs_key)
@@ -34,6 +36,10 @@ pub(crate) fn generate_abs_enums(
 
             abs_field_variants.push(quote! {
                 #field_name(#child_struct_abs_field)
+            });
+
+            abs_folder_variants.push(quote! {
+                #field_name(#child_struct_abs_folder)
             });
         } else {
             let field_type = format_ident!("{}", field.ty_string);
@@ -50,15 +56,18 @@ pub(crate) fn generate_abs_enums(
 
     quote! {
         #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-        #[automatically_derived]
         pub enum #abs_key_enum {
             #(#abs_key_variants,)*
         }
 
         #[derive(PartialEq, Eq, Clone, Copy)]
-        #[automatically_derived]
         pub enum #abs_field_enum {
             #(#abs_field_variants,)*
+        }
+
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+        pub enum #abs_folder_enum {
+            #(#abs_folder_variants,)*
         }
     }
 }
@@ -71,17 +80,12 @@ pub(crate) fn generate_flat_enums(
 
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
+    let flat_folder_enum = root_struct.type_names.flat_folder_enum.clone();
 
     let mut flat_key_variants: Vec<TokenStream2> = Vec::new();
     let mut flat_field_variants: Vec<TokenStream2> = Vec::new();
 
-    for (flat_field, abs_field_vector) in data_structure
-        .root_struct
-        .as_ref()
-        .unwrap()
-        .field_to_abs_path_map
-        .iter()
-    {
+    for (flat_field, abs_field_vector) in root_struct.field_to_abs_path_map.iter() {
         let field_name = format_ident!("{}", to_camel_case(&flat_field));
         let abs_path = abs_field_vector.first().unwrap();
 
@@ -102,17 +106,31 @@ pub(crate) fn generate_flat_enums(
         });
     }
 
+    let flat_folder_variants: Vec<TokenStream2> = root_struct
+        .child_struct_to_abs_path_map
+        .iter()
+        .map(|(flat_folder, _)| {
+            let folder_name = format_ident!("{}", to_camel_case(&flat_folder));
+            quote! {
+                #folder_name
+            }
+        })
+        .collect();
+
     quote! {
         #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-        #[automatically_derived]
         pub enum #flat_key_enum {
             #(#flat_key_variants,)*
         }
 
         #[derive(PartialEq, Eq, Clone, Copy)]
-        #[automatically_derived]
         pub enum #flat_field_enum {
             #(#flat_field_variants,)*
+        }
+
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+        pub enum #flat_folder_enum {
+            #(#flat_folder_variants,)*
         }
     }
 }

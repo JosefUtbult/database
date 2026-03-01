@@ -2,7 +2,7 @@
 pub(crate) mod test_types {
 
     use crate::{
-        ToKey,
+        AbsFolderConstraints, FlatFolderConstraints, ToKey,
         database_traits::{
             AbsFieldConstraints, AbsKeyConstraints, AllVariants, FlatFieldConstraints,
             FlatKeyConstraints, UsizeConstraints, VariantCount,
@@ -96,7 +96,6 @@ pub(crate) mod test_types {
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    #[allow(dead_code)]
     pub(crate) enum MyDataAbsKeys {
         Param1,
         Param2,
@@ -105,14 +104,6 @@ pub(crate) mod test_types {
         Inner2(MyInnerDataKeys),
     }
     impl AbsKeyConstraints for MyDataAbsKeys {}
-
-    enum MyDataWildcardKeys {
-        Param1,
-        Param2,
-        Param3,
-        Inner1(Option<MyInnerDataKeys>),
-        Inner2(Option<MyInnerDataKeys>),
-    }
 
     pub(crate) const MY_DATA_ABS_VARIANT_COUNT: usize = 7;
     pub(crate) const MY_DATA_ABS_KEYS_ALL_VARIANTS: [MyDataAbsKeys; MY_DATA_ABS_VARIANT_COUNT] = [
@@ -132,6 +123,16 @@ pub(crate) mod test_types {
     impl AllVariants for MyDataAbsKeys {
         const ALL_VARIANTS: &[Self] = &MY_DATA_ABS_KEYS_ALL_VARIANTS;
     }
+
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyDataAbsFolders {
+        Inner1,
+        Inner2,
+    }
+    impl VariantCount for MyDataAbsFolders {
+        const COUNT: usize = 2;
+    }
+    impl AbsFolderConstraints for MyDataAbsFolders {}
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     #[allow(dead_code)]
@@ -201,6 +202,27 @@ pub(crate) mod test_types {
 
     impl AllVariants for MyDataFlatKeys {
         const ALL_VARIANTS: &[Self] = &MY_DATA_FLAT_KEYS_ALL_VARIANTS;
+    }
+
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyDataFlatFolders {
+        Inner1,
+        Inner2,
+    }
+    impl VariantCount for MyDataFlatFolders {
+        const COUNT: usize = 2;
+    }
+    impl AbsFolderConstraints for MyDataFlatFolders {}
+    impl FlatFolderConstraints<MyDataAbsFolders> for MyDataFlatFolders {}
+    impl FlatFolderConstraints<MyDataFlatFolders> for MyDataFlatFolders {}
+
+    impl From<MyDataAbsFolders> for MyDataFlatFolders {
+        fn from(value: MyDataAbsFolders) -> Self {
+            match value {
+                MyDataAbsFolders::Inner1 => MyDataFlatFolders::Inner1,
+                MyDataAbsFolders::Inner2 => MyDataFlatFolders::Inner2,
+            }
+        }
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]

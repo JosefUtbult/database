@@ -4,8 +4,8 @@ local dap = require("dap")
 local lspconfig = require("lspconfig")
 local rust_config = require("utils.lsp_configs")["rust_analyzer"]
 
--- Disable only cwd old files
-vim.g.telescope_cwd_only = false
+-- Enable only cwd old files
+vim.g.telescope_cwd_only = true
 
 rust_config.settings["rust-analyzer"].workspace = rust_config.settings["rust-analyzer"].workspace or {}
 

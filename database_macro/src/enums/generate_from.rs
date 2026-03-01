@@ -8,7 +8,7 @@ use crate::{
     casing::to_camel_case,
     data_structure::{
         absolute_path::{AbsolutePath, AbsolutePathField},
-        struct_data::{StructData, TypeNames},
+        struct_data::{StructData, StructMap},
     },
 };
 
@@ -133,6 +133,87 @@ pub(crate) fn abs_path_to_token_stream(
     (abs_key_stream, abs_field_stream)
 }
 
+fn recurse_flat_from(
+    struct_data: &StructData,
+    struct_map: &StructMap,
+    flat_key_enum: &Ident,
+    flat_field_enum: &Ident,
+    flat_folder_enum: &Ident,
+) -> (TokenStream2, TokenStream2, Option<TokenStream2>) {
+    let mut abs_key_to_flat_key_match: Vec<TokenStream2> = Vec::new();
+    let mut abs_field_to_flat_field_match: Vec<TokenStream2> = Vec::new();
+    let mut abs_folder_to_flat_folder_match: Vec<TokenStream2> = Vec::new();
+
+    let abs_key_enum = struct_data.type_names.abs_key_enum.clone();
+    let abs_field_enum = struct_data.type_names.abs_field_enum.clone();
+    let abs_folder_enum = struct_data.type_names.abs_folder_enum.clone();
+
+    for field in struct_data.fields.iter() {
+        let field_name = format_ident!("{}", to_camel_case(&field.name));
+        if let Some(child_struct_data) = struct_map.get(&field.ty_string) {
+            let (child_key_stream, child_field_stream, child_folder_stream) = recurse_flat_from(
+                child_struct_data,
+                struct_map,
+                flat_key_enum,
+                flat_field_enum,
+                flat_folder_enum,
+            );
+
+            abs_key_to_flat_key_match.push(quote! {
+                #abs_key_enum::#field_name(key) => #child_key_stream
+            });
+
+            abs_field_to_flat_field_match.push(quote! {
+                #abs_field_enum::#field_name(field) => #child_field_stream
+            });
+
+            if let Some(child_folder_stream) = child_folder_stream {
+                abs_folder_to_flat_folder_match.push(quote! {
+                    #abs_folder_enum::#field_name(folder) => #child_folder_stream
+                });
+            }
+            else {
+                abs_folder_to_flat_folder_match.push(quote! {
+                    #abs_folder_enum::#field_name(_) => #flat_folder_enum::#field_name
+                });
+            }
+        } else {
+            abs_key_to_flat_key_match.push(quote! {
+                #abs_key_enum::#field_name => #flat_key_enum::#field_name
+            });
+
+            abs_field_to_flat_field_match.push(quote! {
+                #abs_field_enum::#field_name(value) => #flat_field_enum::#field_name(value)
+            });
+        }
+    }
+
+    let key_stream = quote! {
+        match key {
+            #(#abs_key_to_flat_key_match,)*
+        }
+    };
+
+    let field_stream = quote! {
+        match field {
+            #(#abs_field_to_flat_field_match,)*
+        }
+    };
+
+    let folder_stream = if abs_folder_to_flat_folder_match.len() > 0 {
+        Some(quote! {
+            match folder {
+                #(#abs_folder_to_flat_folder_match,)*
+            }
+        })
+    }
+    else {
+        None
+    };
+
+    (key_stream, field_stream, folder_stream)
+}
+
 pub(crate) fn generate_flat_from(
     crate_path: &TokenStream2,
     data_structure: &DataStructure,
@@ -141,38 +222,29 @@ pub(crate) fn generate_flat_from(
 
     let abs_key_enum = root_struct.type_names.abs_key_enum.clone();
     let abs_field_enum = root_struct.type_names.abs_field_enum.clone();
+    let abs_folder_enum = root_struct.type_names.abs_folder_enum.clone();
+
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
+    let flat_folder_enum = root_struct.type_names.flat_folder_enum.clone();
 
     let mut flat_field_to_flat_key_match: Vec<TokenStream2> = Vec::new();
-    let mut abs_key_to_flat_key_match: Vec<TokenStream2> = Vec::new();
-    let mut abs_field_to_flat_field_match: Vec<TokenStream2> = Vec::new();
 
-    for (flat_field, abs_paths) in root_struct.field_to_abs_path_map.iter() {
+    for (flat_field, _) in root_struct.field_to_abs_path_map.iter() {
         let field_name = format_ident!("{}", to_camel_case(&flat_field));
 
         flat_field_to_flat_key_match.push(quote! {
             Self::#field_name(_) => #flat_key_enum::#field_name
         });
-
-        for abs_path in abs_paths.iter() {
-            let value_stream = quote!(value);
-            let (child_key, child_field) = abs_path_to_token_stream(
-                abs_path,
-                &Some(value_stream),
-                &abs_key_enum,
-                &abs_field_enum,
-            );
-
-            abs_key_to_flat_key_match.push(quote! {
-                #child_key => Self::#field_name
-            });
-
-            abs_field_to_flat_field_match.push(quote! {
-                #child_field => Self::#field_name(value)
-            });
-        }
     }
+
+    let (abs_key_to_flat_key_match, abs_field_to_flat_field_match, abs_folder_to_flat_folder_match) = recurse_flat_from(
+        root_struct,
+        &data_structure.struct_map,
+        &flat_key_enum,
+        &flat_field_enum,
+        &flat_folder_enum,
+    );
 
     quote! {
         #[automatically_derived]
@@ -187,18 +259,21 @@ pub(crate) fn generate_flat_from(
         #[automatically_derived]
         impl From<#abs_key_enum> for #flat_key_enum {
             fn from(key: #abs_key_enum) -> Self {
-                match key {
-                    #(#abs_key_to_flat_key_match,)*
-                }
+                #abs_key_to_flat_key_match
             }
         }
 
         #[automatically_derived]
         impl From<#abs_field_enum> for #flat_field_enum {
             fn from(field: #abs_field_enum) -> Self {
-                match field {
-                    #(#abs_field_to_flat_field_match,)*
-                }
+                #abs_field_to_flat_field_match
+            }
+        }
+
+        #[automatically_derived]
+        impl From<#abs_folder_enum> for #flat_folder_enum {
+            fn from(folder: #abs_folder_enum) -> Self {
+                #abs_folder_to_flat_folder_match
             }
         }
     }

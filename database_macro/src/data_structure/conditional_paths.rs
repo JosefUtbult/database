@@ -29,6 +29,7 @@ type MultiPathVector = Vec<Box<MultiPath>>;
 type MultiPathMap = HashMap<String, MultiPathVector>;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub(crate) struct FolderFocusPath {
     pub(crate) struct_name: Ident,
     pub(crate) parent_fields: Vec<Ident>,
@@ -42,6 +43,7 @@ pub(crate) type FolderFocusPathMap = HashMap<String, FolderFocusPathVector>;
 pub(crate) struct FieldInfo {
     pub(crate) variant_name: Ident,
     pub(crate) field_name: Ident,
+    #[allow(dead_code)]
     pub(crate) value_struct_name: Ident,
 }
 
@@ -49,6 +51,7 @@ pub(crate) struct FieldInfo {
 pub(crate) struct FolderInfo {
     pub(crate) folder_enum_name: Ident,
     pub(crate) folder_focus_variable: Ident,
+    #[allow(dead_code)]
     pub(crate) abs_folder_key_enum: Ident,
     pub(crate) fields: Vec<FieldInfo>,
 }
@@ -252,7 +255,7 @@ fn recursive_rebuild_into_public(
                     folder_info.fields.push(FieldInfo {
                         variant_name: format_ident!("{}", to_camel_case(field_name)),
                         field_name: format_ident!("{}", field_name),
-                        value_struct_name: format_ident!("{}", multi_path.struct_name)
+                        value_struct_name: format_ident!("{}", multi_path.struct_name),
                     });
                 }
             }

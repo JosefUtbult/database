@@ -1,6 +1,11 @@
-pub trait FocusHandler<AbsKey, AbsField, FlatKey, FlatField> {
-    fn get_focus_key(&self, key: FlatKey) -> AbsKey;
-    fn get_focus_field(&self, field: FlatField) -> AbsField;
+use crate::{DatabaseDescription, UsizeConstraints};
+
+pub trait FocusHandler<Database: DatabaseDescription>
+where
+    usize: UsizeConstraints<<Database as DatabaseDescription>::FlatKey>,
+{
+    fn get_focus_key(&self, key: Database::FlatKey) -> Database::AbsKey;
+    fn get_focus_field(&self, field: Database::FlatField) -> Database::AbsField;
 }
 
 #[cfg(test)]
@@ -8,11 +13,10 @@ pub(crate) mod test_data_field_accessor {
     use core::cell::RefCell;
 
     use crate::{
-        FocusHandler,
-        test_types::test_types::{
+        test::MyDatabaseDescription, test_types::test_types::{
             MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields,
             MyInnerDataKeys,
-        },
+        }, FocusHandler
     };
 
     #[derive(Clone, Copy, Debug)]
@@ -39,7 +43,7 @@ pub(crate) mod test_data_field_accessor {
         }
     }
 
-    impl FocusHandler<MyDataAbsKeys, MyDataAbsFields, MyDataFlatKeys, MyDataFlatFields>
+    impl FocusHandler<MyDatabaseDescription>
         for MyFocusHandler
     {
         fn get_focus_key(&self, key: MyDataFlatKeys) -> MyDataAbsKeys {

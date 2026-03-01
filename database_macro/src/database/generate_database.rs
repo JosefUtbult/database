@@ -9,6 +9,7 @@ pub(crate) fn generate_database(
 ) -> TokenStream2 {
     let root_struct = data_structure.root_struct.as_ref().unwrap();
     let root_struct_name = format_ident!("{}", &root_struct.name);
+    let root_struct_description = format_ident!("{}Description", &root_struct.name);
     let type_names = data_structure.type_names.as_ref().unwrap();
 
     let database_name = type_names.database_name.clone();
@@ -16,23 +17,32 @@ pub(crate) fn generate_database(
 
     let abs_key_enum = root_struct.type_names.abs_key_enum.clone();
     let abs_field_enum = root_struct.type_names.abs_field_enum.clone();
+    let abs_folder_enum = root_struct.type_names.abs_folder_enum.clone();
 
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
+    let flat_folder_enum = root_struct.type_names.flat_folder_enum.clone();
 
-    let abs_count_name = root_struct.type_names.abs_count_name.clone();
-    let flat_count_name = root_struct.type_names.flat_count_name.clone();
+    let abs_count_name = root_struct.type_names.abs_path_count_name.clone();
+    let flat_count_name = root_struct.type_names.flat_path_count_name.clone();
 
     quote! {
+        pub struct #root_struct_description {}
+        impl #crate_path::DatabaseDescription for #root_struct_description {
+            type AbsKey = #abs_key_enum;
+            type AbsField = #abs_field_enum;
+            type AbsFolder = #abs_folder_enum;
+            type FlatKey = #flat_key_enum;
+            type FlatField = #flat_field_enum;
+            type FlatFolder = #flat_folder_enum;
+            type Data = #root_struct_name;
+        }
+
         pub type #database_name<'a, Mutex> = #crate_path::LayerDatabase<
             'a,
             Mutex,
-            #root_struct_name,
             #focus_handler_name,
-            #abs_key_enum,
-            #abs_field_enum,
-            #flat_key_enum,
-            #flat_field_enum,
+            #root_struct_description,
             #abs_count_name,
             #flat_count_name
         >;

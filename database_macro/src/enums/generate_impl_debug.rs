@@ -1,7 +1,32 @@
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Ident, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 
 use crate::{DataStructure, casing::to_camel_case, data_structure::struct_data::StructData};
+
+fn build_fmt(enum_name: &Ident, match_vector: &Vec<TokenStream2>) -> TokenStream2 {
+    if match_vector.len() > 0 {
+        quote! {
+            #[automatically_derived]
+            impl core::fmt::Debug for #enum_name {
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
+                    match self {
+                        #(#match_vector,)*
+                    }
+                }
+            }
+        }
+    } else {
+        let stringified = enum_name.to_string();
+        quote! {
+            #[automatically_derived]
+            impl core::fmt::Debug for #enum_name {
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
+                    write!(f, #stringified)
+                }
+            }
+        }
+    }
+}
 
 pub(crate) fn generate_abs_impl_debug(
     _crate_path: &TokenStream2,
@@ -10,9 +35,11 @@ pub(crate) fn generate_abs_impl_debug(
 ) -> TokenStream2 {
     let abs_key_enum = struct_data.type_names.abs_key_enum.clone();
     let abs_field_enum = struct_data.type_names.abs_field_enum.clone();
+    let abs_folder_enum = struct_data.type_names.abs_folder_enum.clone();
 
     let mut key_match: Vec<TokenStream2> = Vec::new();
     let mut field_match: Vec<TokenStream2> = Vec::new();
+    let mut folder_match: Vec<TokenStream2> = Vec::new();
 
     // Start with non-structs
     for field in struct_data.fields.iter() {
@@ -33,8 +60,11 @@ pub(crate) fn generate_abs_impl_debug(
         });
 
         if struct_data.has_debug_derive {
-            let field_string =
-                format!("{}::{}({{:?}})", abs_field_enum.to_string(), field_name.to_string());
+            let field_string = format!(
+                "{}::{}({{:?}})",
+                abs_field_enum.to_string(),
+                field_name.to_string()
+            );
 
             field_match.push(quote! {
                 Self::#field_name(value) => write!(f, #field_string, value)
@@ -72,27 +102,26 @@ pub(crate) fn generate_abs_impl_debug(
             field_match.push(quote! {
                 Self::#field_name(field) => write!(f, #field_string, field)
             });
+
+            let folder_string = format!(
+                "{}::{}({{:?}})",
+                abs_folder_enum.to_string(),
+                field_name.to_string()
+            );
+            folder_match.push(quote! {
+                Self::#field_name(folder) => write!(f, #folder_string, folder)
+            });
         }
     }
 
-    quote! {
-        #[automatically_derived]
-        impl core::fmt::Debug for #abs_key_enum {
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    #(#key_match,)*
-                }
-            }
-        }
+    let key_stream = build_fmt(&abs_key_enum, &key_match);
+    let field_stream = build_fmt(&abs_field_enum, &field_match);
+    let folder_stream = build_fmt(&abs_folder_enum, &folder_match);
 
-        #[automatically_derived]
-        impl core::fmt::Debug for #abs_field_enum {
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    #(#field_match,)*
-                }
-            }
-        }
+    quote! {
+        #key_stream
+        #field_stream
+        #folder_stream
     }
 }
 
@@ -103,11 +132,13 @@ pub(crate) fn generate_flat_impl_debug(
     let root_struct = data_structure.root_struct.as_ref().unwrap();
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
+    let flat_folder_enum = root_struct.type_names.flat_folder_enum.clone();
 
     let mut key_match: Vec<TokenStream2> = Vec::new();
     let mut field_match: Vec<TokenStream2> = Vec::new();
+    let mut folder_match: Vec<TokenStream2> = Vec::new();
 
-    for (field, abs_paths) in root_struct.field_to_abs_path_map.iter() {
+    for (field, _) in root_struct.field_to_abs_path_map.iter() {
         let field_name = format_ident!("{}", to_camel_case(&field));
 
         let key_string = format!("{}::{}", flat_key_enum.to_string(), field_name.to_string());
@@ -116,15 +147,21 @@ pub(crate) fn generate_flat_impl_debug(
         });
 
         if data_structure.all_structs_has_debug_derive {
-            let field_string =
-                format!("{}::{}({{:?}})", flat_field_enum.to_string(), field_name.to_string());
+            let field_string = format!(
+                "{}::{}({{:?}})",
+                flat_field_enum.to_string(),
+                field_name.to_string()
+            );
 
             field_match.push(quote! {
                 Self::#field_name(value) => write!(f, #field_string, value)
             });
         } else {
-            let field_string =
-                format!("{}::{}", flat_field_enum.to_string(), field_name.to_string());
+            let field_string = format!(
+                "{}::{}",
+                flat_field_enum.to_string(),
+                field_name.to_string()
+            );
 
             field_match.push(quote! {
                 Self::#field_name(_) => write!(f, #field_string)
@@ -132,23 +169,26 @@ pub(crate) fn generate_flat_impl_debug(
         }
     }
 
-    quote! {
-        #[automatically_derived]
-        impl core::fmt::Debug for #flat_key_enum{
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    #(#key_match,)*
-                }
-            }
-        }
+    for (field, _) in root_struct.child_struct_to_abs_path_map.iter() {
+        let field_name = format_ident!("{}", to_camel_case(&field));
 
-        #[automatically_derived]
-        impl core::fmt::Debug for #flat_field_enum {
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
-                match self {
-                    #(#field_match,)*
-                }
-            }
-        }
+        let folder_string = format!(
+            "{}::{}",
+            flat_folder_enum.to_string(),
+            field_name.to_string()
+        );
+        folder_match.push(quote! {
+            Self::#field_name => write!(f, #folder_string)
+        });
+    }
+
+    let key_stream = build_fmt(&flat_key_enum, &key_match);
+    let field_stream = build_fmt(&flat_field_enum, &field_match);
+    let folder_stream = build_fmt(&flat_folder_enum, &folder_match);
+
+    quote! {
+        #key_stream
+        #field_stream
+        #folder_stream
     }
 }

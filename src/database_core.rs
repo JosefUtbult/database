@@ -1,14 +1,9 @@
-use core::marker::PhantomData;
 use heapless::Vec;
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
 use crate::{
-    DataFieldAccessor, FocusHandler, SubscriberData,
-    database_traits::{
-        AbsFieldConstraints, AbsKeyConstraints, FlatFieldConstraints, FlatKeyConstraints,
-        UsizeConstraints,
-    },
-    mutex::ScopedLocked,
+    AllVariants, DataFieldAccessor, DatabaseDescription, FocusHandler, SubscriberData, ToKey,
+    VariantCount, database_traits::UsizeConstraints, mutex::ScopedLocked,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,74 +50,37 @@ where
 }
 
 pub(crate) struct InternalMutable<
-    Data,
-    AbsKey,
-    AbsField,
-    FlatKey,
-    FlatField,
+    Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > where
-    AbsKey: AbsKeyConstraints,
-    AbsField: AbsFieldConstraints<AbsKey>,
-    FlatKey: FlatKeyConstraints<AbsKey>,
-    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
-    usize: UsizeConstraints<FlatKey>,
-    Data: DataFieldAccessor<AbsKey, AbsField>,
+    usize: UsizeConstraints<Database::FlatKey>,
 {
-    pub(crate) data: Data,
-    pub(crate) _abs_key: PhantomData<AbsKey>,
-    pub(crate) _abs_fields: PhantomData<AbsField>,
-    pub(crate) _flat_key: PhantomData<FlatKey>,
-    pub(crate) _flat_fields: PhantomData<FlatField>,
+    pub(crate) data: Database::Data,
 }
 
 impl<
-    Data,
-    AbsKey,
-    AbsField,
-    FlatKey,
-    FlatField,
+    Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
->
-    InternalMutable<
-        Data,
-        AbsKey,
-        AbsField,
-        FlatKey,
-        FlatField,
-        ABS_PARAMETER_COUNT,
-        FLAT_PARAMETER_COUNT,
-    >
+> InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
 where
-    AbsKey: AbsKeyConstraints,
-    AbsField: AbsFieldConstraints<AbsKey>,
-    FlatKey: FlatKeyConstraints<AbsKey>,
-    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
-    usize: UsizeConstraints<FlatKey>,
-    Data: DataFieldAccessor<AbsKey, AbsField>,
+    usize: UsizeConstraints<Database::FlatKey>,
 {
-    pub(crate) const fn new(data: Data) -> Self {
-        Self {
-            data,
-            _abs_key: PhantomData,
-            _abs_fields: PhantomData,
-            _flat_key: PhantomData,
-            _flat_fields: PhantomData,
-        }
+    pub(crate) const fn new(data: Database::Data) -> Self {
+        Self { data }
     }
 
     pub(crate) fn clone<Focus>(
         &mut self,
         other: &Self,
         focus_handler: &Focus,
-    ) -> Vec<FlatKey, FLAT_PARAMETER_COUNT>
+    ) -> Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>
     where
-        Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
+        Focus: FocusHandler<Database>,
     {
-        let mut changed_key_set: KeySet<FlatKey, FLAT_PARAMETER_COUNT> = KeySet::new();
-        for abs_key in AbsKey::ALL_VARIANTS.iter() {
+        let mut changed_key_set: KeySet<Database::FlatKey, FLAT_PARAMETER_COUNT> = KeySet::new();
+        for abs_key in <Database::AbsKey as AllVariants>::ALL_VARIANTS.iter() {
             let this_abs_field = self.data.get(*abs_key);
             let other_abs_field = other.data.get(*abs_key);
 
@@ -141,94 +99,47 @@ where
 
 pub(crate) struct DatabaseCore<
     'a,
-    Focus,
-    Mutex,
-    Data,
-    AbsKey,
-    AbsField,
-    FlatKey,
-    FlatField,
+    Focus: FocusHandler<Database>,
+    Mutex: ScopedRawMutex + ConstInit,
+    Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > where
-    Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
-    Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints,
-    AbsField: AbsFieldConstraints<AbsKey>,
-    FlatKey: FlatKeyConstraints<AbsKey>,
-    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
-    usize: UsizeConstraints<FlatKey>,
-    Data: DataFieldAccessor<AbsKey, AbsField>,
+    usize: UsizeConstraints<Database::FlatKey>,
 {
-    pub(crate) data: ScopedLocked<
-        Mutex,
-        InternalMutable<
-            Data,
-            AbsKey,
-            AbsField,
-            FlatKey,
-            FlatField,
-            ABS_PARAMETER_COUNT,
-            FLAT_PARAMETER_COUNT,
-        >,
-    >,
-    pub(crate) subscribers:
-        SubscriberData<'a, Mutex, AbsKey, FlatKey, FlatField, FLAT_PARAMETER_COUNT>,
+    pub(crate) data:
+        ScopedLocked<Mutex, InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>>,
+    pub(crate) subscribers: SubscriberData<'a, Mutex, Database, FLAT_PARAMETER_COUNT>,
     pub(crate) focus_handler: Focus,
-    _fields: PhantomData<FlatField>,
 }
 
 impl<
     'a,
-    Focus,
-    Mutex,
-    Data,
-    AbsKey,
-    AbsField,
-    FlatKey,
-    FlatField,
+    Focus: FocusHandler<Database>,
+    Mutex: ScopedRawMutex + ConstInit,
+    Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
->
-    DatabaseCore<
-        'a,
-        Focus,
-        Mutex,
-        Data,
-        AbsKey,
-        AbsField,
-        FlatKey,
-        FlatField,
-        ABS_PARAMETER_COUNT,
-        FLAT_PARAMETER_COUNT,
-    >
+> DatabaseCore<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
 where
-    Focus: FocusHandler<AbsKey, AbsField, FlatKey, FlatField>,
-    Mutex: ScopedRawMutex + ConstInit,
-    AbsKey: AbsKeyConstraints,
-    AbsField: AbsFieldConstraints<AbsKey>,
-    FlatKey: FlatKeyConstraints<AbsKey>,
-    FlatField: FlatFieldConstraints<AbsField, FlatKey>,
-    usize: UsizeConstraints<FlatKey>,
-    Data: DataFieldAccessor<AbsKey, AbsField>,
+    usize: UsizeConstraints<Database::FlatKey>,
 {
     const _STATIC_ASSERTIONS: () = {
-        assert!(ABS_PARAMETER_COUNT == AbsKey::COUNT);
-        assert!(ABS_PARAMETER_COUNT == AbsField::COUNT);
-        assert!(FLAT_PARAMETER_COUNT == FlatKey::COUNT);
-        assert!(FLAT_PARAMETER_COUNT == FlatField::COUNT);
+        assert!(ABS_PARAMETER_COUNT == <Database::AbsKey as VariantCount>::COUNT);
+        assert!(ABS_PARAMETER_COUNT == <Database::AbsField as VariantCount>::COUNT);
+        assert!(FLAT_PARAMETER_COUNT == <Database::FlatKey as VariantCount>::COUNT);
+        assert!(FLAT_PARAMETER_COUNT == <Database::FlatField as VariantCount>::COUNT);
     };
 
-    pub(crate) const fn new(data: Data, focus_handler: Focus) -> Self {
+    pub(crate) const fn new(data: Database::Data, focus_handler: Focus) -> Self {
         Self {
             focus_handler,
             data: ScopedLocked::new(InternalMutable::new(data)),
             subscribers: SubscriberData::new(),
-            _fields: PhantomData,
         }
     }
 
-    pub(crate) fn get(&self, key: AbsKey) -> Result<FlatField, DatabaseError> {
+    pub(crate) fn get(&self, key: Database::AbsKey) -> Result<Database::FlatField, DatabaseError> {
         match self.data.try_with(|internal| {
             let field = internal.data.get(key);
             field.into()
@@ -238,14 +149,18 @@ where
         }
     }
 
-    pub(crate) fn set(&self, flat_key: FlatKey, abs_field: AbsField) -> Result<(), DatabaseError> {
+    pub(crate) fn set(
+        &self,
+        flat_key: Database::FlatKey,
+        abs_field: Database::AbsField,
+    ) -> Result<(), DatabaseError> {
         #[derive(PartialEq, Eq)]
         enum SetState {
             Updated,
             UpToDate,
         }
 
-        let abs_key: AbsKey = abs_field.to_key();
+        let abs_key: Database::AbsKey = abs_field.to_key();
 
         match self.data.try_with(|internal| {
             if internal.data.get(abs_key) != abs_field {

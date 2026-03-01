@@ -7,7 +7,7 @@ use syn::ItemStruct;
 use crate::casing::to_upper_snake_case;
 use crate::data_structure::field_to_child_struct_map::FieldToChildStructMap;
 
-use super::field_to_abs_map::FieldToAbsPathMap;
+use super::field_to_abs_map::FieldToAbsPathList;
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct FieldData {
@@ -27,10 +27,14 @@ impl Debug for FieldData {
 pub(crate) struct TypeNames {
     pub(crate) abs_key_enum: Ident,
     pub(crate) abs_field_enum: Ident,
+    pub(crate) abs_folder_enum: Ident,
     pub(crate) flat_key_enum: Ident,
     pub(crate) flat_field_enum: Ident,
-    pub(crate) abs_count_name: Ident,
-    pub(crate) flat_count_name: Ident,
+    pub(crate) flat_folder_enum: Ident,
+    pub(crate) abs_path_count_name: Ident,
+    pub(crate) flat_path_count_name: Ident,
+    pub(crate) abs_folder_count_name: Ident,
+    pub(crate) flat_folder_count_name: Ident,
     #[allow(dead_code)]
     pub(crate) folder_key_name: Ident,
     #[allow(dead_code)]
@@ -47,9 +51,10 @@ pub(crate) struct StructData {
     pub(crate) ident: Ident,
     pub(crate) item: ItemStruct,
     pub(crate) fields: Vec<FieldData>,
-    pub(crate) field_to_abs_path_map: FieldToAbsPathMap,
-    pub(crate) child_struct_to_abs_path_map: FieldToAbsPathMap,
+    pub(crate) field_to_abs_path_map: FieldToAbsPathList,
+    pub(crate) child_struct_to_abs_path_map: FieldToAbsPathList,
     pub(crate) field_to_child_struct_map: FieldToChildStructMap,
+    pub(crate) abs_folder_count: usize,
     pub(crate) abs_path_count: usize,
     pub(crate) has_debug_derive: bool,
 }
@@ -68,7 +73,7 @@ impl Debug for StructData {
     }
 }
 
-pub(super) type StructMap = HashMap<String, StructData>;
+pub(crate) type StructMap = HashMap<String, StructData>;
 
 fn has_debug_derive(item_struct: &ItemStruct) -> bool {
     let attrs = item_struct.clone().attrs;
@@ -100,22 +105,27 @@ pub(super) fn populate_struct_map(
                 type_names: TypeNames {
                     abs_key_enum: format_ident!("{}AbsKey", name.clone()),
                     abs_field_enum: format_ident!("{}AbsField", name.clone()),
+                    abs_folder_enum: format_ident!("{}AbsFolder", name.clone()),
                     flat_key_enum: format_ident!("{}Key", name.clone()),
                     flat_field_enum: format_ident!("{}Field", name.clone()),
+                    flat_folder_enum: format_ident!("{}Folder", name.clone()),
                     folder_key_name: format_ident!("{}FolderKey", name.clone()),
                     folder_field_name: format_ident!("{}FolderKey", name.clone()),
                     folder_mut_field_name: format_ident!("{}FolderFieldMut", name.clone()),
-                    abs_count_name: format_ident!("{}_ABS_COUNT", uppercase_name),
-                    flat_count_name: format_ident!("{}_FLAT_COUNT", uppercase_name),
+                    abs_path_count_name: format_ident!("{}_ABS_COUNT", uppercase_name),
+                    flat_path_count_name: format_ident!("{}_FLAT_COUNT", uppercase_name),
+                    abs_folder_count_name: format_ident!("{}_FOLDER_ABS_COUNT", uppercase_name),
+                    flat_folder_count_name: format_ident!("{}_FOLDER_FLAT_COUNT", uppercase_name),
                 },
                 name,
                 ident: item_struct.ident.clone(),
                 item: item_struct,
                 fields: Vec::new(),
-                field_to_abs_path_map: FieldToAbsPathMap::new(),
-                child_struct_to_abs_path_map: FieldToAbsPathMap::new(),
+                field_to_abs_path_map: FieldToAbsPathList::new(),
+                child_struct_to_abs_path_map: FieldToAbsPathList::new(),
                 field_to_child_struct_map: FieldToChildStructMap::new(),
                 abs_path_count: 0,
+                abs_folder_count: 0,
                 has_debug_derive,
             }
         })

@@ -1,12 +1,15 @@
 use core::panic;
 use std::collections::HashMap;
 
+use crate::data_structure::absolute_path::compare_abs_paths;
+
 use super::{
     absolute_path::{AbsolutePath, AbsolutePathField},
     struct_data::StructMap,
 };
 
-pub(super) type FieldToAbsPathMap = HashMap<String, Vec<AbsolutePath>>;
+type FieldToAbsPathMap = HashMap<String, Vec<AbsolutePath>>;
+pub(super) type FieldToAbsPathList = Vec<(String, Vec<AbsolutePath>)>;
 
 fn recursivly_build_abs_path(
     struct_map: &StructMap,
@@ -101,12 +104,16 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
         );
 
         let mut abs_path_count = 0;
+        let mut abs_folder_count = 0;
 
         // Then, filter out all paths that ends in structs
-        for (field_name, abs_paths) in field_to_abs_path_map {
+        for (field_name, mut abs_paths) in field_to_abs_path_map {
             if abs_paths.is_empty() {
                 continue;
             }
+
+            // Sort the path
+            abs_paths.sort_by(|lhs, rhs| compare_abs_paths(&lhs, &rhs));
 
             // Technically, all paths should be the same type. But just to make sure, explicitly
             // check every instance
@@ -116,7 +123,9 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
                 if let Some(last_path) = abs_path.last() {
                     match last_path {
                         AbsolutePathField::Struct(_) => {
-                            struct_paths.push(abs_path);
+                            if !struct_paths.contains(&abs_path) {
+                                struct_paths.push(abs_path);
+                            }
                         }
                         AbsolutePathField::NonStruct(_) => {
                             non_struct_paths.push(abs_path);
@@ -133,17 +142,28 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
             }
 
             if !struct_paths.is_empty() {
+                abs_folder_count += struct_paths.len();
                 struct_data
                     .child_struct_to_abs_path_map
-                    .insert(field_name, non_struct_paths);
+                    .push((field_name, non_struct_paths));
             } else if !non_struct_paths.is_empty() {
                 abs_path_count += non_struct_paths.len();
                 struct_data
                     .field_to_abs_path_map
-                    .insert(field_name, non_struct_paths);
+                    .push((field_name, non_struct_paths));
             }
         }
 
+        // Sort both vectors on field names
+        struct_data
+            .child_struct_to_abs_path_map
+            .sort_by(|(lhs_name, _), (rhs_name, _)| lhs_name.cmp(rhs_name));
+
+        struct_data
+            .field_to_abs_path_map
+            .sort_by(|(lhs_name, _), (rhs_name, _)| lhs_name.cmp(rhs_name));
+
         struct_data.abs_path_count = abs_path_count;
+        struct_data.abs_folder_count = abs_folder_count;
     }
 }
