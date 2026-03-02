@@ -25,21 +25,12 @@ fn generate_variant_count(
     let abs_path_count_name = root_struct.type_names.abs_path_count_name.clone();
     let flat_path_count_name = root_struct.type_names.flat_path_count_name.clone();
 
-    let abs_folder_count_name = root_struct.type_names.abs_folder_count_name.clone();
-    let flat_folder_count_name = root_struct.type_names.flat_folder_count_name.clone();
-
     let abs_path_count = root_struct.abs_path_count;
     let flat_path_count = root_struct.field_to_abs_path_map.len();
-
-    let abs_folder_count = root_struct.abs_folder_count;
-    let flat_folder_count = root_struct.child_struct_to_abs_path_map.len();
 
     quote! {
         pub const #abs_path_count_name: usize = #abs_path_count;
         pub const #flat_path_count_name: usize = #flat_path_count;
-
-        pub const #abs_folder_count_name: usize = #abs_folder_count;
-        pub const #flat_folder_count_name: usize = #flat_folder_count;
 
         #[automatically_derived]
         impl #crate_path::VariantCount for #abs_key_enum {
@@ -59,16 +50,6 @@ fn generate_variant_count(
         #[automatically_derived]
         impl #crate_path::VariantCount for #flat_key_enum {
             const COUNT: usize = #flat_path_count_name;
-        }
-
-        #[automatically_derived]
-        impl #crate_path::VariantCount for #abs_folder_enum {
-            const COUNT: usize = #abs_folder_count_name;
-        }
-
-        #[automatically_derived]
-        impl #crate_path::VariantCount for #flat_folder_enum {
-            const COUNT: usize = #flat_folder_count_name;
         }
     }
 }

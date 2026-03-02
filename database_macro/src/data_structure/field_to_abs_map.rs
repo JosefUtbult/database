@@ -104,7 +104,6 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
         );
 
         let mut abs_path_count = 0;
-        let mut abs_folder_count = 0;
 
         // Then, filter out all paths that ends in structs
         for (field_name, mut abs_paths) in field_to_abs_path_map {
@@ -115,38 +114,24 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
             // Sort the path
             abs_paths.sort_by(|lhs, rhs| compare_abs_paths(&lhs, &rhs));
 
-            // Technically, all paths should be the same type. But just to make sure, explicitly
-            // check every instance
-            let mut struct_paths = Vec::new();
-            let mut non_struct_paths = Vec::new();
-            for abs_path in abs_paths {
-                if let Some(last_path) = abs_path.last() {
-                    match last_path {
-                        AbsolutePathField::Struct(_) => {
-                            if !struct_paths.contains(&abs_path) {
-                                struct_paths.push(abs_path);
-                            }
+            let filtered: Vec<&AbsolutePath> = abs_paths
+                .iter()
+                .filter(|abs_path| {
+                    if let Some(last_path) = abs_path.last() {
+                        match last_path {
+                            AbsolutePathField::Struct(_) => false,
+                            AbsolutePathField::NonStruct(_) => true,
                         }
-                        AbsolutePathField::NonStruct(_) => {
-                            non_struct_paths.push(abs_path);
-                        }
+                    } else {
+                        false
                     }
-                }
-            }
+                })
+                .collect();
 
-            if !(struct_paths.is_empty() || non_struct_paths.is_empty()) {
-                eprintln!("Got paths for the same variable both as structs and non structs");
-                eprintln!("Structs: {:?}", struct_paths);
-                eprintln!("Non Structs: {:?}", non_struct_paths);
-                panic!()
-            }
+            let non_struct_paths: Vec<AbsolutePath> =
+                filtered.iter().map(|&abs_path| abs_path.clone()).collect();
 
-            if !struct_paths.is_empty() {
-                abs_folder_count += struct_paths.len();
-                struct_data
-                    .child_struct_to_abs_path_map
-                    .push((field_name, non_struct_paths));
-            } else if !non_struct_paths.is_empty() {
+            if !non_struct_paths.is_empty() {
                 abs_path_count += non_struct_paths.len();
                 struct_data
                     .field_to_abs_path_map
@@ -154,16 +139,11 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
             }
         }
 
-        // Sort both vectors on field names
-        struct_data
-            .child_struct_to_abs_path_map
-            .sort_by(|(lhs_name, _), (rhs_name, _)| lhs_name.cmp(rhs_name));
-
+        // Sort the vector on field names
         struct_data
             .field_to_abs_path_map
             .sort_by(|(lhs_name, _), (rhs_name, _)| lhs_name.cmp(rhs_name));
 
         struct_data.abs_path_count = abs_path_count;
-        struct_data.abs_folder_count = abs_folder_count;
     }
 }

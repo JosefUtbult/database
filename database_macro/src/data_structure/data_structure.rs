@@ -1,8 +1,9 @@
 use crate::{
     ParsedInput,
     casing::to_camel_case,
-    data_structure::conditional_paths::{
-        AllFolderFields, FolderFocusPathMap, build_conditional_paths,
+    data_structure::{
+        all_fields::build_field_maps,
+        conditional_paths::{AllFolderFields, FolderFocusPathMap, build_conditional_paths},
     },
 };
 use proc_macro2::Ident;
@@ -86,8 +87,11 @@ pub(crate) fn build_data_structure(parsed_input: ParsedInput) -> DataStructure {
     // Build the map field name -> absolute field path
     build_field_to_abs_path_map(&mut data_structure.struct_map);
 
+    // Build other maps
+    build_field_maps(&mut data_structure.struct_map);
     field_to_child_struct_map(&mut data_structure.struct_map);
 
+    // Check if all internal structs derive debug
     check_all_structs_has_debug(&mut data_structure);
 
     // Locate the root struct

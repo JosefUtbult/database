@@ -7,26 +7,30 @@ pub trait DataFieldAccessor<AbsKey, AbsField> {
     fn set(&mut self, field: AbsField);
 }
 
-pub trait DataFieldPartialAccessor<AbsKey, AbsField, T> {
+pub trait DataFieldPartialAccessor<AbsKey, T> {
     fn try_get(&self, key: AbsKey) -> Result<T, AccessorError>;
     fn try_set(&mut self, key: AbsKey, value: T) -> Result<(), AccessorError>;
+}
+
+pub trait FolderAccessor<'a, AbsFolder, T> {
+    fn try_get(&'a self, folder: AbsFolder) -> Result<&'a T, AccessorError>;
+    fn try_get_mut(&'a mut self, folder: AbsFolder) -> Result<&'a mut T, AccessorError>;
 }
 
 #[cfg(test)]
 pub(crate) mod data_field_accessors {
     use crate::{
-        AccessorError, DataFieldAccessor, DataFieldPartialAccessor,
         test_types::test_types::{
             MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyFlatData,
-            MyInnerData, MyInnerDataFields, MyInnerDataKeys, MyLayerData,
-        },
+            MyInnerData, MyInnerDataFields, MyInnerDataAbsKeys, MyLayerData,
+        }, AccessorError, DataFieldAccessor, DataFieldPartialAccessor, FolderAccessor
     };
 
-    impl DataFieldAccessor<MyInnerDataKeys, MyInnerDataFields> for MyInnerData {
-        fn get(&self, key: MyInnerDataKeys) -> MyInnerDataFields {
+    impl DataFieldAccessor<MyInnerDataAbsKeys, MyInnerDataFields> for MyInnerData {
+        fn get(&self, key: MyInnerDataAbsKeys) -> MyInnerDataFields {
             match key {
-                MyInnerDataKeys::Param4 => MyInnerDataFields::Param4(self.param4.clone()),
-                MyInnerDataKeys::Param5 => MyInnerDataFields::Param5(self.param5.clone()),
+                MyInnerDataAbsKeys::Param4 => MyInnerDataFields::Param4(self.param4.clone()),
+                MyInnerDataAbsKeys::Param5 => MyInnerDataFields::Param5(self.param5.clone()),
             }
         }
 
@@ -38,17 +42,17 @@ pub(crate) mod data_field_accessors {
         }
     }
 
-    impl DataFieldPartialAccessor<MyInnerDataKeys, MyInnerDataFields, u8> for MyInnerData {
-        fn try_get(&self, key: MyInnerDataKeys) -> Result<u8, super::AccessorError> {
+    impl DataFieldPartialAccessor<MyInnerDataAbsKeys, u8> for MyInnerData {
+        fn try_get(&self, key: MyInnerDataAbsKeys) -> Result<u8, super::AccessorError> {
             match key {
-                MyInnerDataKeys::Param4 => Ok(self.param4.clone()),
+                MyInnerDataAbsKeys::Param4 => Ok(self.param4.clone()),
                 _ => Err(AccessorError::TypeMissmatch("u8")),
             }
         }
 
-        fn try_set(&mut self, key: MyInnerDataKeys, value: u8) -> Result<(), super::AccessorError> {
+        fn try_set(&mut self, key: MyInnerDataAbsKeys, value: u8) -> Result<(), super::AccessorError> {
             match key {
-                MyInnerDataKeys::Param4 => {
+                MyInnerDataAbsKeys::Param4 => {
                     self.param4 = value;
                     Ok(())
                 }
@@ -57,21 +61,23 @@ pub(crate) mod data_field_accessors {
         }
     }
 
-    impl DataFieldPartialAccessor<MyInnerDataKeys, MyInnerDataFields, bool> for MyInnerData {
-        fn try_get(&self, key: MyInnerDataKeys) -> Result<bool, super::AccessorError> {
+    impl<'a> FolderAccessor<MyInner
+
+    impl DataFieldPartialAccessor<MyInnerDataAbsKeys, bool> for MyInnerData {
+        fn try_get(&self, key: MyInnerDataAbsKeys) -> Result<bool, super::AccessorError> {
             match key {
-                MyInnerDataKeys::Param5 => Ok(self.param5.clone()),
+                MyInnerDataAbsKeys::Param5 => Ok(self.param5.clone()),
                 _ => Err(AccessorError::TypeMissmatch("bool")),
             }
         }
 
         fn try_set(
             &mut self,
-            key: MyInnerDataKeys,
+            key: MyInnerDataAbsKeys,
             value: bool,
         ) -> Result<(), super::AccessorError> {
             match key {
-                MyInnerDataKeys::Param5 => {
+                MyInnerDataAbsKeys::Param5 => {
                     self.param5 = value;
                     Ok(())
                 }

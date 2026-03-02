@@ -78,7 +78,7 @@ pub(crate) mod test {
         test_types::test_types::{
             MY_DATA_ABS_VARIANT_COUNT, MY_DATA_FLAT_VARIANT_COUNT, MyDataAbsFields,
             MyDataAbsFolders, MyDataAbsKeys, MyDataFlatFields, MyDataFlatFolders, MyDataFlatKeys,
-            MyInnerDataFields, MyInnerDataKeys, MyLayerData,
+            MyInnerDataFields, MyInnerDataAbsKeys, MyLayerData,
         },
     };
 
@@ -154,10 +154,10 @@ pub(crate) mod test {
             .unwrap();
 
         let res1 = database
-            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataAbsKeys::Param4))
             .unwrap();
         let res2 = database
-            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataAbsKeys::Param4))
             .unwrap();
 
         std::println!(
@@ -213,10 +213,10 @@ pub(crate) mod test {
         database.set(MyDataFlatFields::Param4(2)).unwrap();
 
         let res1 = database
-            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataAbsKeys::Param4))
             .unwrap();
         let res2 = database
-            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataAbsKeys::Param4))
             .unwrap();
 
         assert!(matches!(res1, MyDataFlatFields::Param4(1)));

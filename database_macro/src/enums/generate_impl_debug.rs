@@ -132,11 +132,9 @@ pub(crate) fn generate_flat_impl_debug(
     let root_struct = data_structure.root_struct.as_ref().unwrap();
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
-    let flat_folder_enum = root_struct.type_names.flat_folder_enum.clone();
 
     let mut key_match: Vec<TokenStream2> = Vec::new();
     let mut field_match: Vec<TokenStream2> = Vec::new();
-    let mut folder_match: Vec<TokenStream2> = Vec::new();
 
     for (field, _) in root_struct.field_to_abs_path_map.iter() {
         let field_name = format_ident!("{}", to_camel_case(&field));
@@ -169,26 +167,11 @@ pub(crate) fn generate_flat_impl_debug(
         }
     }
 
-    for (field, _) in root_struct.child_struct_to_abs_path_map.iter() {
-        let field_name = format_ident!("{}", to_camel_case(&field));
-
-        let folder_string = format!(
-            "{}::{}",
-            flat_folder_enum.to_string(),
-            field_name.to_string()
-        );
-        folder_match.push(quote! {
-            Self::#field_name => write!(f, #folder_string)
-        });
-    }
-
     let key_stream = build_fmt(&flat_key_enum, &key_match);
     let field_stream = build_fmt(&flat_field_enum, &field_match);
-    let folder_stream = build_fmt(&flat_folder_enum, &folder_match);
 
     quote! {
         #key_stream
         #field_stream
-        #folder_stream
     }
 }

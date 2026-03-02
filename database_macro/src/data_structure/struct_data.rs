@@ -5,6 +5,7 @@ use std::{collections::HashMap, fmt::Debug};
 use syn::ItemStruct;
 
 use crate::casing::to_upper_snake_case;
+use crate::data_structure::all_fields::TypeToFieldMap;
 use crate::data_structure::field_to_child_struct_map::FieldToChildStructMap;
 
 use super::field_to_abs_map::FieldToAbsPathList;
@@ -52,9 +53,9 @@ pub(crate) struct StructData {
     pub(crate) item: ItemStruct,
     pub(crate) fields: Vec<FieldData>,
     pub(crate) field_to_abs_path_map: FieldToAbsPathList,
-    pub(crate) child_struct_to_abs_path_map: FieldToAbsPathList,
+    pub(crate) type_to_field_map: TypeToFieldMap,
+    pub(crate) child_struct_to_field_map: TypeToFieldMap,
     pub(crate) field_to_child_struct_map: FieldToChildStructMap,
-    pub(crate) abs_folder_count: usize,
     pub(crate) abs_path_count: usize,
     pub(crate) has_debug_derive: bool,
 }
@@ -122,10 +123,10 @@ pub(super) fn populate_struct_map(
                 item: item_struct,
                 fields: Vec::new(),
                 field_to_abs_path_map: FieldToAbsPathList::new(),
-                child_struct_to_abs_path_map: FieldToAbsPathList::new(),
+                type_to_field_map: TypeToFieldMap::new(),
+                child_struct_to_field_map: TypeToFieldMap::new(),
                 field_to_child_struct_map: FieldToChildStructMap::new(),
                 abs_path_count: 0,
-                abs_folder_count: 0,
                 has_debug_derive,
             }
         })

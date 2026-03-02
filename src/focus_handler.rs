@@ -13,12 +13,10 @@ pub(crate) mod test_data_field_accessor {
     use core::cell::RefCell;
 
     use crate::{
-        FocusHandler,
-        test::MyDatabaseDescription,
-        test_types::test_types::{
+        test::MyDatabaseDescription, test_types::test_types::{
             MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields,
-            MyInnerDataKeys,
-        },
+            MyInnerDataAbsKeys,
+        }, FocusHandler
     };
 
     #[derive(Clone, Copy, Debug)]
@@ -45,7 +43,9 @@ pub(crate) mod test_data_field_accessor {
         }
     }
 
-    impl FocusHandler<MyDatabaseDescription> for MyFocusHandler {
+    impl FocusHandler<MyDatabaseDescription>
+        for MyFocusHandler
+    {
         fn get_focus_key(&self, key: MyDataFlatKeys) -> MyDataAbsKeys {
             let inner_focus = *self.inner_focus.lock().unwrap().borrow();
             let abs_key = match key {
@@ -53,12 +53,12 @@ pub(crate) mod test_data_field_accessor {
                 MyDataFlatKeys::Param2 => MyDataAbsKeys::Param2,
                 MyDataFlatKeys::Param3 => MyDataAbsKeys::Param3,
                 MyDataFlatKeys::Param4 => match inner_focus {
-                    InnerFocus::One => MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4),
-                    InnerFocus::Two => MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4),
+                    InnerFocus::One => MyDataAbsKeys::Inner1(MyInnerDataAbsKeys::Param4),
+                    InnerFocus::Two => MyDataAbsKeys::Inner2(MyInnerDataAbsKeys::Param4),
                 },
                 MyDataFlatKeys::Param5 => match inner_focus {
-                    InnerFocus::One => MyDataAbsKeys::Inner1(MyInnerDataKeys::Param5),
-                    InnerFocus::Two => MyDataAbsKeys::Inner2(MyInnerDataKeys::Param5),
+                    InnerFocus::One => MyDataAbsKeys::Inner1(MyInnerDataAbsKeys::Param5),
+                    InnerFocus::Two => MyDataAbsKeys::Inner2(MyInnerDataAbsKeys::Param5),
                 },
             };
 

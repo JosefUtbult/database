@@ -107,17 +107,6 @@ pub(crate) fn generate_flat_enums(
         });
     }
 
-    let flat_folder_variants: Vec<TokenStream2> = root_struct
-        .child_struct_to_abs_path_map
-        .iter()
-        .map(|(flat_folder, _)| {
-            let folder_name = format_ident!("{}", to_camel_case(&flat_folder));
-            quote! {
-                #folder_name
-            }
-        })
-        .collect();
-
     quote! {
         #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
         pub enum #flat_key_enum {
@@ -127,11 +116,6 @@ pub(crate) fn generate_flat_enums(
         #[derive(PartialEq, Eq, Clone, Copy)]
         pub enum #flat_field_enum {
             #(#flat_field_variants,)*
-        }
-
-        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-        pub enum #flat_folder_enum {
-            #(#flat_folder_variants,)*
         }
     }
 }

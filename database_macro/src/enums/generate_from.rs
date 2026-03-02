@@ -171,7 +171,8 @@ fn recurse_flat_from(
                 abs_folder_to_flat_folder_match.push(quote! {
                     #abs_folder_enum::#field_name(folder) => #child_folder_stream
                 });
-            } else {
+            }
+            else {
                 abs_folder_to_flat_folder_match.push(quote! {
                     #abs_folder_enum::#field_name(_) => #flat_folder_enum::#field_name
                 });
@@ -205,7 +206,8 @@ fn recurse_flat_from(
                 #(#abs_folder_to_flat_folder_match,)*
             }
         })
-    } else {
+    }
+    else {
         None
     };
 
@@ -236,14 +238,13 @@ pub(crate) fn generate_flat_from(
         });
     }
 
-    let (abs_key_to_flat_key_match, abs_field_to_flat_field_match, abs_folder_to_flat_folder_match) =
-        recurse_flat_from(
-            root_struct,
-            &data_structure.struct_map,
-            &flat_key_enum,
-            &flat_field_enum,
-            &flat_folder_enum,
-        );
+    let (abs_key_to_flat_key_match, abs_field_to_flat_field_match, abs_folder_to_flat_folder_match) = recurse_flat_from(
+        root_struct,
+        &data_structure.struct_map,
+        &flat_key_enum,
+        &flat_field_enum,
+        &flat_folder_enum,
+    );
 
     quote! {
         #[automatically_derived]
