@@ -25,12 +25,21 @@ fn generate_variant_count(
     let abs_path_count_name = root_struct.type_names.abs_path_count_name.clone();
     let flat_path_count_name = root_struct.type_names.flat_path_count_name.clone();
 
-    let abs_path_count = root_struct.abs_path_count;
-    let flat_path_count = root_struct.field_to_abs_path_map.len();
+    let abs_folder_count_name = root_struct.type_names.abs_folder_count_name.clone();
+    let flat_folder_count_name = root_struct.type_names.flat_folder_count_name.clone();
+
+    let abs_path_count = root_struct.abs_field_path_count;
+    let flat_path_count = root_struct.field_to_field_abs_path_map.len();
+
+    let abs_folder_count = root_struct.abs_folder_path_count;
+    let flat_folder_count = root_struct.field_to_folder_map.len();
 
     quote! {
         pub const #abs_path_count_name: usize = #abs_path_count;
         pub const #flat_path_count_name: usize = #flat_path_count;
+
+        pub const #abs_folder_count_name: usize = #abs_folder_count;
+        pub const #flat_folder_count_name: usize = #flat_folder_count;
 
         #[automatically_derived]
         impl #crate_path::VariantCount for #abs_key_enum {
@@ -43,6 +52,11 @@ fn generate_variant_count(
         }
 
         #[automatically_derived]
+        impl #crate_path::VariantCount for #abs_folder_enum {
+            const COUNT: usize = #abs_folder_count_name;
+        }
+
+        #[automatically_derived]
         impl #crate_path::VariantCount for #flat_field_enum {
             const COUNT: usize = #flat_path_count_name;
         }
@@ -50,6 +64,11 @@ fn generate_variant_count(
         #[automatically_derived]
         impl #crate_path::VariantCount for #flat_key_enum {
             const COUNT: usize = #flat_path_count_name;
+        }
+
+        #[automatically_derived]
+        impl #crate_path::VariantCount for #flat_folder_enum {
+            const COUNT: usize = #flat_folder_count_name;
         }
     }
 }
@@ -62,14 +81,14 @@ fn generate_all_variants(
 
     let abs_key_enum = root_struct.type_names.abs_key_enum.clone();
     let abs_field_enum = root_struct.type_names.abs_field_enum.clone();
-    let abs_path_count = root_struct.abs_path_count;
+    let abs_path_count = root_struct.abs_field_path_count;
     let abs_key_list_name = format_ident!(
         "{}_ALL_KEYS",
         to_upper_snake_case(&abs_key_enum.to_string())
     );
 
     let mut all_abs_paths = Vec::new();
-    for (_, abs_path_vector) in root_struct.field_to_abs_path_map.iter() {
+    for (_, abs_path_vector) in root_struct.field_to_field_abs_path_map.iter() {
         for path in abs_path_vector.iter() {
             all_abs_paths.push(path.clone());
         }
@@ -105,7 +124,7 @@ fn generate_from_flat_key_to_usize(
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
 
     let mut all_fields: Vec<String> = root_struct
-        .field_to_abs_path_map
+        .field_to_field_abs_path_map
         .iter()
         .map(|(field, _)| field.clone())
         .collect();

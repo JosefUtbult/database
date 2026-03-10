@@ -4,12 +4,11 @@ use proc_macro2::{Ident, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 
 use crate::{
-    DataStructure,
-    casing::to_camel_case,
-    data_structure::{
-        absolute_path::{AbsolutePath, AbsolutePathField},
+    casing::to_camel_case, data_structure::{
+        absolute_path::{get_field_name_and_type, AbsolutePath, AbsolutePathField},
+        all_fields::find_folder_type,
         struct_data::{StructData, StructMap},
-    },
+    }, DataStructure
 };
 
 pub(crate) fn generate_abs_from(
@@ -26,7 +25,7 @@ pub(crate) fn generate_abs_from(
     for field in struct_data.fields.iter() {
         // Ignore child struct fields
         if struct_data
-            .field_to_child_struct_map
+            .field_to_folder_map
             .get(&field.ty_string)
             .is_some()
         {
@@ -41,14 +40,21 @@ pub(crate) fn generate_abs_from(
     }
 
     // Then, child structs
-    for (_child_name, child_field_vector) in struct_data.field_to_child_struct_map.iter() {
-        for field in child_field_vector.iter() {
-            let field_name = format_ident!("{}", to_camel_case(field));
-
-            abs_field_to_abs_key_match.push(quote! {
-                Self::#field_name(field) => #abs_key_enum::#field_name(field.to_key())
-            });
+    for field in struct_data.fields.iter() {
+        // Ignore non child struct fields
+        if !struct_data
+            .field_to_folder_map
+            .get(&field.ty_string)
+            .is_some()
+        {
+            continue;
         }
+
+        let field_name = format_ident!("{}", to_camel_case(&field.name));
+
+        abs_field_to_abs_key_match.push(quote! {
+            Self::#field_name(field) => #abs_key_enum::#field_name(field.to_key())
+        });
     }
 
     quote! {
@@ -133,30 +139,26 @@ pub(crate) fn abs_path_to_token_stream(
     (abs_key_stream, abs_field_stream)
 }
 
-fn recurse_flat_from(
+fn recurse_flat_field_from(
     struct_data: &StructData,
     struct_map: &StructMap,
     flat_key_enum: &Ident,
     flat_field_enum: &Ident,
-    flat_folder_enum: &Ident,
-) -> (TokenStream2, TokenStream2, Option<TokenStream2>) {
+) -> (TokenStream2, TokenStream2) {
     let mut abs_key_to_flat_key_match: Vec<TokenStream2> = Vec::new();
     let mut abs_field_to_flat_field_match: Vec<TokenStream2> = Vec::new();
-    let mut abs_folder_to_flat_folder_match: Vec<TokenStream2> = Vec::new();
 
     let abs_key_enum = struct_data.type_names.abs_key_enum.clone();
     let abs_field_enum = struct_data.type_names.abs_field_enum.clone();
-    let abs_folder_enum = struct_data.type_names.abs_folder_enum.clone();
 
     for field in struct_data.fields.iter() {
         let field_name = format_ident!("{}", to_camel_case(&field.name));
         if let Some(child_struct_data) = struct_map.get(&field.ty_string) {
-            let (child_key_stream, child_field_stream, child_folder_stream) = recurse_flat_from(
+            let (child_key_stream, child_field_stream) = recurse_flat_field_from(
                 child_struct_data,
                 struct_map,
                 flat_key_enum,
                 flat_field_enum,
-                flat_folder_enum,
             );
 
             abs_key_to_flat_key_match.push(quote! {
@@ -166,17 +168,6 @@ fn recurse_flat_from(
             abs_field_to_flat_field_match.push(quote! {
                 #abs_field_enum::#field_name(field) => #child_field_stream
             });
-
-            if let Some(child_folder_stream) = child_folder_stream {
-                abs_folder_to_flat_folder_match.push(quote! {
-                    #abs_folder_enum::#field_name(folder) => #child_folder_stream
-                });
-            }
-            else {
-                abs_folder_to_flat_folder_match.push(quote! {
-                    #abs_folder_enum::#field_name(_) => #flat_folder_enum::#field_name
-                });
-            }
         } else {
             abs_key_to_flat_key_match.push(quote! {
                 #abs_key_enum::#field_name => #flat_key_enum::#field_name
@@ -200,18 +191,47 @@ fn recurse_flat_from(
         }
     };
 
-    let folder_stream = if abs_folder_to_flat_folder_match.len() > 0 {
-        Some(quote! {
-            match folder {
-                #(#abs_folder_to_flat_folder_match,)*
-            }
-        })
-    }
-    else {
-        None
-    };
+    (key_stream, field_stream)
+}
 
-    (key_stream, field_stream, folder_stream)
+fn recurse_flat_folder_from(
+    struct_data: &StructData,
+    struct_map: &StructMap,
+    flat_folder_enum: &Ident,
+) -> TokenStream2 {
+    let abs_folder_enum = struct_data.type_names.abs_folder_enum.clone();
+    let mut abs_folder_to_flat_folder_match: Vec<TokenStream2> = Vec::new();
+    for (folder_type, field_vector) in struct_data.field_to_folder_map.iter() {
+        if let Some(child_struct_data) = struct_map.get(folder_type) {
+            for abs_path in field_vector.first().iter() {
+                let (field_name, _) = get_field_name_and_type(abs_path).unwrap();
+
+                let field_name_ident = format_ident!("{}", to_camel_case(&field_name));
+                let folder_type = format_ident!("{}", to_camel_case(&folder_type));
+
+                abs_folder_to_flat_folder_match.push(quote! {
+                    #abs_folder_enum::#field_name_ident => #flat_folder_enum::#folder_type
+                });
+
+                if !child_struct_data.field_to_folder_map.is_empty() {
+                    let inner_field_name = format_ident!("In{}", to_camel_case(&field_name));
+
+                    let child_folder_stream =
+                        recurse_flat_folder_from(child_struct_data, struct_map, flat_folder_enum);
+
+                    abs_folder_to_flat_folder_match.push(quote! {
+                        #abs_folder_enum::#inner_field_name(folder) => #child_folder_stream
+                    });
+                }
+            }
+        }
+    }
+
+    quote! {
+        match folder {
+            #(#abs_folder_to_flat_folder_match,)*
+        }
+    }
 }
 
 pub(crate) fn generate_flat_from(
@@ -230,7 +250,7 @@ pub(crate) fn generate_flat_from(
 
     let mut flat_field_to_flat_key_match: Vec<TokenStream2> = Vec::new();
 
-    for (flat_field, _) in root_struct.field_to_abs_path_map.iter() {
+    for (flat_field, _) in root_struct.field_to_field_abs_path_map.iter() {
         let field_name = format_ident!("{}", to_camel_case(&flat_field));
 
         flat_field_to_flat_key_match.push(quote! {
@@ -238,13 +258,15 @@ pub(crate) fn generate_flat_from(
         });
     }
 
-    let (abs_key_to_flat_key_match, abs_field_to_flat_field_match, abs_folder_to_flat_folder_match) = recurse_flat_from(
+    let (abs_key_to_flat_key_match, abs_field_to_flat_field_match) = recurse_flat_field_from(
         root_struct,
         &data_structure.struct_map,
         &flat_key_enum,
         &flat_field_enum,
-        &flat_folder_enum,
     );
+
+    let abs_folder_to_flat_folder_match =
+        recurse_flat_folder_from(root_struct, &data_structure.struct_map, &flat_folder_enum);
 
     quote! {
         #[automatically_derived]

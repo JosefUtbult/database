@@ -104,6 +104,7 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
         );
 
         let mut abs_path_count = 0;
+        let mut abs_folder_count = 0;
 
         // Then, filter out all paths that ends in structs
         for (field_name, mut abs_paths) in field_to_abs_path_map {
@@ -114,36 +115,40 @@ pub(super) fn build_field_to_abs_path_map<'a>(struct_map: &'a mut StructMap) {
             // Sort the path
             abs_paths.sort_by(|lhs, rhs| compare_abs_paths(&lhs, &rhs));
 
-            let filtered: Vec<&AbsolutePath> = abs_paths
-                .iter()
-                .filter(|abs_path| {
-                    if let Some(last_path) = abs_path.last() {
-                        match last_path {
-                            AbsolutePathField::Struct(_) => false,
-                            AbsolutePathField::NonStruct(_) => true,
-                        }
-                    } else {
-                        false
-                    }
-                })
-                .collect();
+            // Split the paths into a vector of fields and a vector of folders
+            let (field_paths, folder_paths): (Vec<AbsolutePath>, Vec<AbsolutePath>) = abs_paths
+                .into_iter()
+                .filter(|abs_path| !abs_path.is_empty())
+                .partition(|abs_field| match abs_field.last().unwrap() {
+                    AbsolutePathField::NonStruct(_) => true,
+                    AbsolutePathField::Struct(_) => false,
+                });
 
-            let non_struct_paths: Vec<AbsolutePath> =
-                filtered.iter().map(|&abs_path| abs_path.clone()).collect();
-
-            if !non_struct_paths.is_empty() {
-                abs_path_count += non_struct_paths.len();
+            if !field_paths.is_empty() {
+                abs_path_count += field_paths.len();
                 struct_data
-                    .field_to_abs_path_map
-                    .push((field_name, non_struct_paths));
+                    .field_to_field_abs_path_map
+                    .push((field_name.clone(), field_paths));
+            }
+
+            if !folder_paths.is_empty() {
+                abs_folder_count += folder_paths.len();
+                struct_data
+                    .field_to_folder_abs_path_map
+                    .push((field_name, folder_paths));
             }
         }
 
-        // Sort the vector on field names
+        // Sort both vectors on field names
         struct_data
-            .field_to_abs_path_map
+            .field_to_field_abs_path_map
             .sort_by(|(lhs_name, _), (rhs_name, _)| lhs_name.cmp(rhs_name));
 
-        struct_data.abs_path_count = abs_path_count;
+        struct_data
+            .field_to_folder_abs_path_map
+            .sort_by(|(lhs_name, _), (rhs_name, _)| lhs_name.cmp(rhs_name));
+
+        struct_data.abs_field_path_count = abs_path_count;
+        struct_data.abs_folder_path_count = abs_folder_count;
     }
 }

@@ -1,4 +1,5 @@
 use core::panic;
+use std::{collections::HashMap, result};
 
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
@@ -6,7 +7,11 @@ use quote::{format_ident, quote};
 use crate::{
     DataStructure,
     casing::to_camel_case,
-    data_structure::{absolute_path::AbsolutePathField, struct_data::StructData},
+    data_structure::{
+        absolute_path::{AbsolutePath, AbsolutePathField},
+        all_fields::find_folder_type,
+        struct_data::StructData,
+    },
 };
 
 pub(crate) fn generate_abs_enums(
@@ -40,8 +45,15 @@ pub(crate) fn generate_abs_enums(
             });
 
             abs_folder_variants.push(quote! {
-                #field_name(#child_struct_abs_folder)
+                #field_name
             });
+
+            if !child_struct.field_to_folder_map.is_empty() {
+                let inner_field_name = format_ident!("In{}", to_camel_case(&field.name));
+                abs_folder_variants.push(quote! {
+                    #inner_field_name(#child_struct_abs_folder)
+                });
+            }
         } else {
             let field_type = format_ident!("{}", field.ty_string);
 
@@ -55,7 +67,7 @@ pub(crate) fn generate_abs_enums(
         }
     }
 
-    quote! {
+    let mut result = quote! {
         #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
         pub enum #abs_key_enum {
             #(#abs_key_variants,)*
@@ -65,12 +77,18 @@ pub(crate) fn generate_abs_enums(
         pub enum #abs_field_enum {
             #(#abs_field_variants,)*
         }
+    };
 
-        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-        pub enum #abs_folder_enum {
-            #(#abs_folder_variants,)*
-        }
+    if !abs_folder_variants.is_empty() {
+        result.extend(quote! {
+            #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+            pub enum #abs_folder_enum {
+                #(#abs_folder_variants,)*
+            }
+        });
     }
+
+    result
 }
 
 pub(crate) fn generate_flat_enums(
@@ -85,8 +103,9 @@ pub(crate) fn generate_flat_enums(
 
     let mut flat_key_variants: Vec<TokenStream2> = Vec::new();
     let mut flat_field_variants: Vec<TokenStream2> = Vec::new();
+    let mut flat_folder_variants: Vec<TokenStream2> = Vec::new();
 
-    for (flat_field, abs_field_vector) in root_struct.field_to_abs_path_map.iter() {
+    for (flat_field, abs_field_vector) in root_struct.field_to_field_abs_path_map.iter() {
         let field_name = format_ident!("{}", to_camel_case(&flat_field));
         let abs_path = abs_field_vector.first().unwrap();
 
@@ -107,6 +126,20 @@ pub(crate) fn generate_flat_enums(
         });
     }
 
+    for (folder_type, _abs_paths) in root_struct.field_to_folder_map.iter() {
+        let folder_type_ident = format_ident!("{}", to_camel_case(&folder_type));
+        flat_folder_variants.push(quote! {
+            #folder_type_ident
+        });
+    }
+
+    // for folder_type in root_struct.all_child_folders.iter() {
+    //     let folder_type = format_ident!("{}", to_camel_case(&folder_type));
+    //     flat_folder_variants.push(quote! {
+    //         #folder_type
+    //     });
+    // }
+
     quote! {
         #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
         pub enum #flat_key_enum {
@@ -116,6 +149,11 @@ pub(crate) fn generate_flat_enums(
         #[derive(PartialEq, Eq, Clone, Copy)]
         pub enum #flat_field_enum {
             #(#flat_field_variants,)*
+        }
+
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+        pub enum #flat_folder_enum {
+            #(#flat_folder_variants,)*
         }
     }
 }

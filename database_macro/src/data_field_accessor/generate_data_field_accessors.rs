@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 
-use crate::{casing::to_camel_case, data_structure::struct_data::{self, StructData}, DataStructure};
+use crate::{casing::to_camel_case, data_structure::{absolute_path::get_field_name_and_type, struct_data::{self, StructData}}, DataStructure};
 
 fn generate_data_field_accessor(
     crate_path: &TokenStream2,
@@ -19,7 +19,7 @@ fn generate_data_field_accessor(
     for field in struct_data.fields.iter() {
         // Ignore child struct fields
         if struct_data
-            .field_to_child_struct_map
+            .field_to_folder_map
             .get(&field.ty_string)
             .is_some()
         {
@@ -39,10 +39,11 @@ fn generate_data_field_accessor(
     }
 
     // Then, child structs
-    for (_child_name, child_field_vector) in struct_data.field_to_child_struct_map.iter() {
-        for field in child_field_vector.iter() {
+    for (_child_name, child_field_vector) in struct_data.field_to_folder_map.iter() {
+        for abs_path in child_field_vector.iter() {
+            let (field, _) = get_field_name_and_type(abs_path).unwrap();
             let variable_name = format_ident!("{}", field);
-            let field_name = format_ident!("{}", to_camel_case(field));
+            let field_name = format_ident!("{}", to_camel_case(&field));
 
             get_matches.push(quote! {
                 #abs_key_enum::#field_name(key) => #abs_field_enum::#field_name(self.#variable_name.get(key))
@@ -73,7 +74,7 @@ fn generate_data_field_accessor(
 
 fn generate_try_accessor(
     crate_path: &TokenStream2,
-    data_structure: &DataStructure,
+    _data_structure: &DataStructure,
     struct_data: &StructData,
 ) -> TokenStream2 {
     let struct_name = format_ident!("{}", struct_data.name.clone());
@@ -106,7 +107,7 @@ fn generate_try_accessor(
         let field_type_string = field_type.to_string();
 
         result_streams.push(quote! {
-            impl #crate_path::DataFieldPartialAccessor<#abs_key_enum, #field_type> for #struct_name {
+            impl #crate_path::DataFieldTryAccessor<#abs_key_enum, #field_type> for #struct_name {
                 fn try_get(&self, key: #abs_key_enum) -> Result<#field_type, #crate_path::AccessorError> {
                     match key {
                         #(#get_matches,)*
@@ -129,62 +130,6 @@ fn generate_try_accessor(
     }
 }
 
-fn generate_folder_accessor(
-    crate_path: &TokenStream2,
-    _data_structure: &DataStructure,
-    struct_data: &StructData,
-) -> TokenStream2 {
-    let struct_name = format_ident!("{}", struct_data.name.clone());
-    let abs_folder_enum = struct_data.type_names.abs_folder_enum.clone();
-
-    let mut result_streams: Vec<TokenStream2> = Vec::new();
-
-    for (folder_type, field_vector) in struct_data.child_struct_to_field_map.iter() {
-        let mut get_matches: Vec<TokenStream2> = Vec::new();
-        let mut get_mut_matches: Vec<TokenStream2> = Vec::new();
-
-        let folder_type = format_ident!("{}", folder_type);
-
-        for field in field_vector.iter() {
-            let variable_name = format_ident!("{}", field);
-            let field_name = format_ident!("{}", to_camel_case(&field));
-
-            get_matches.push(quote! {
-                #abs_folder_enum::#field_name => Ok(&self.#variable_name)
-            });
-
-            get_mut_matches.push(quote! {
-                #abs_folder_enum::#field_name => Ok(&mut self.#variable_name)
-            });
-        }
-
-        let field_type_string = folder_type.to_string();
-
-        result_streams.push(quote! {
-            impl<'a> #crate_path::FolderAccessor<'a, #abs_folder_enum, #folder_type> for #struct_name {
-                fn try_get(&'a self, key: #abs_folder_enum) -> Result<&'a #folder_type, #crate_path::AccessorError> {
-                    match key {
-                        #(#get_matches,)*
-                        _ => Err(#crate_path::AccessorError::TypeMissmatch(#field_type_string))
-                    }
-                }
-
-                fn try_get_mut(&'a mut self, key: #abs_folder_enum) -> Result<&'a mut #folder_type, #crate_path::AccessorError> {
-                    match key {
-                        #(#get_mut_matches,)*
-                        _ => Err(#crate_path::AccessorError::TypeMissmatch(#field_type_string))
-                    }
-                }
-            }
-        });
-    }
-
-    quote! {
-        #(#result_streams)*
-    }
-}
-
-
 pub(crate) fn generate_data_field_accessors(
     crate_path: &TokenStream2,
     data_structure: &DataStructure,
@@ -193,6 +138,5 @@ pub(crate) fn generate_data_field_accessors(
     let mut res = TokenStream2::new();
     res.extend(generate_data_field_accessor(crate_path, data_structure, struct_data));
     res.extend(generate_try_accessor(crate_path, data_structure, struct_data));
-    // res.extend(generate_folder_accessor(crate_path, data_structure, struct_data));
     res
 }

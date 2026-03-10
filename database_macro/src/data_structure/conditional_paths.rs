@@ -31,8 +31,9 @@ type MultiPathMap = HashMap<String, MultiPathVector>;
 #[derive(Debug)]
 #[allow(dead_code)]
 pub(crate) struct FolderFocusPath {
-    pub(crate) struct_name: Ident,
-    pub(crate) parent_fields: Vec<Ident>,
+    pub(crate) parent_name: String,
+    pub(crate) struct_name: String,
+    pub(crate) parent_fields: Vec<String>,
     pub(crate) sub_paths: FolderFocusPathVector,
 }
 
@@ -51,7 +52,6 @@ pub(crate) struct FieldInfo {
 pub(crate) struct FolderInfo {
     pub(crate) folder_enum_name: Ident,
     pub(crate) folder_focus_variable: Ident,
-    #[allow(dead_code)]
     pub(crate) abs_folder_key_enum: Ident,
     pub(crate) fields: Vec<FieldInfo>,
 }
@@ -231,7 +231,7 @@ fn recursive_rebuild_into_public(
                 .entry(multi_path.struct_name.clone())
                 .or_insert(FolderInfo {
                     abs_folder_key_enum: format_ident!(
-                        "{}AbsPath",
+                        "{}AbsFolder",
                         to_camel_case(&multi_path.struct_name)
                     ),
                     folder_enum_name: format_ident!(
@@ -263,11 +263,12 @@ fn recursive_rebuild_into_public(
             let parent_fields = multi_path
                 .parent_fields
                 .into_iter()
-                .map(|field| format_ident!("{}", field))
+                .map(|field| field)
                 .collect();
 
             let multi_path = FolderFocusPath {
-                struct_name: format_ident!("{}", multi_path.struct_name),
+                parent_name: multi_path.parent_name,
+                struct_name: multi_path.struct_name,
                 parent_fields,
                 sub_paths,
             };
@@ -311,4 +312,6 @@ pub(super) fn build_conditional_paths(data_structure: &mut DataStructure) {
         &mut data_structure.folder_focus_path_map,
         &mut data_structure.all_folder_fields,
     );
+
+    eprintln!("Multi path map: {:?}", data_structure.folder_focus_path_map);
 }

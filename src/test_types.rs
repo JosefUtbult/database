@@ -10,13 +10,13 @@ pub(crate) mod test_types {
     };
 
     pub(crate) struct MyInnerInnerData {
-        pub(crate) param8: u8,
+        pub(crate) param6: u8,
     }
 
     impl MyInnerInnerData {
         pub(crate) const fn new() -> Self {
             Self {
-                param8: 0
+                param6: 0
             }
         }
     }
@@ -24,8 +24,8 @@ pub(crate) mod test_types {
     pub(crate) struct MyInnerData {
         pub(crate) param4: u8,
         pub(crate) param5: bool,
-        pub(crate) param6: MyInnerInnerData,
-        pub(crate) param7: MyInnerInnerData,
+        pub(crate) inner3: MyInnerInnerData,
+        pub(crate) inner4: MyInnerInnerData,
     }
 
     impl MyInnerData {
@@ -33,8 +33,8 @@ pub(crate) mod test_types {
             Self {
                 param4: 0,
                 param5: false,
-                param6: MyInnerInnerData::new(),
-                param7: MyInnerInnerData::new()
+                inner3: MyInnerInnerData::new(),
+                inner4: MyInnerInnerData::new()
             }
         }
     }
@@ -65,6 +65,7 @@ pub(crate) mod test_types {
         pub(crate) param3: u8,
         pub(crate) param4: u8,
         pub(crate) param5: bool,
+        pub(crate) param6: u8,
     }
 
     impl MyFlatData {
@@ -75,6 +76,7 @@ pub(crate) mod test_types {
                 param3: 0,
                 param4: 0,
                 param5: false,
+                param6: 0
             }
         }
     }
@@ -125,6 +127,12 @@ pub(crate) mod test_types {
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyInnerDataFolders {
+        Inner3,
+        Inner4
+    }
+
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     pub(crate) enum MyDataAbsKeys {
         Param1,
         Param2,
@@ -160,9 +168,9 @@ pub(crate) mod test_types {
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     pub(crate) enum MyDataAbsFolders {
         Inner1,
+        InInner1(MyInnerDataFolders),
         Inner2,
-        Inner3,
-        Inner4,
+        InInner2(MyInnerDataFolders),
     }
     impl VariantCount for MyDataAbsFolders {
         const COUNT: usize = 2;

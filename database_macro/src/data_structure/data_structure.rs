@@ -13,7 +13,7 @@ use std::vec::Vec;
 use super::{
     build_struct_fields::build_struct_fields,
     field_to_abs_map::build_field_to_abs_path_map,
-    field_to_child_struct_map::field_to_child_struct_map,
+    field_to_child_struct_map::field_to_folder_map,
     find_root_struct::find_root_struct,
     struct_data::{StructData, StructMap, populate_struct_map},
 };
@@ -70,7 +70,6 @@ fn get_type_names(data_structure: &mut DataStructure) {
     let _ = data_structure.type_names.insert(type_names);
 }
 
-#[allow(dead_code)]
 pub(crate) fn build_data_structure(parsed_input: ParsedInput) -> DataStructure {
     let mut data_structure: DataStructure = DataStructure::new();
 
@@ -89,7 +88,7 @@ pub(crate) fn build_data_structure(parsed_input: ParsedInput) -> DataStructure {
 
     // Build other maps
     build_field_maps(&mut data_structure.struct_map);
-    field_to_child_struct_map(&mut data_structure.struct_map);
+    field_to_folder_map(&mut data_structure.struct_map);
 
     // Check if all internal structs derive debug
     check_all_structs_has_debug(&mut data_structure);

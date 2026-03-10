@@ -1,44 +1,91 @@
-use core::panic;
 use std::collections::HashMap;
 
 use crate::data_structure::{
-    absolute_path::AbsolutePathField, field_to_abs_map::FieldToAbsPathList, struct_data::StructMap,
+    absolute_path::{AbsolutePathField, get_parent_struct_type},
+    struct_data::StructMap,
 };
 
 pub(crate) type TypeToFieldMap = HashMap<String, Vec<String>>;
 
-fn build_all_field_types(
-    _struct_name: &String,
-    field_to_abs_path_list: &FieldToAbsPathList,
-    result_map: &mut TypeToFieldMap,
-    get_field_type: &dyn Fn(&AbsolutePathField) -> Option<(String, String)>,
-) {
-    for (_, abs_paths) in field_to_abs_path_list {
-        if let Some(abs_path) = abs_paths.first() {
-            if let Some(first_field) = abs_path.first() {
-                if let Some((first_field_type, first_field_name)) = get_field_type(first_field) {
-                    let field_vector = result_map.entry(first_field_type).or_insert(Vec::new());
-                    if !field_vector.contains(&first_field_name) {
-                        field_vector.push(first_field_name);
-                    }
-                }
-            }
-        }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct FieldPair {
+    pub(crate) top_field: String,
+    pub(crate) bottom_field: String,
+}
+
+pub(crate) type FolderToFieldMap = HashMap<String, Vec<FieldPair>>;
+
+pub(crate) fn find_folder_type(
+    field_name: &String,
+    folder_to_field_map: &FolderToFieldMap,
+) -> Option<String> {
+    let result = folder_to_field_map.iter().find(|(_, field_vector)| {
+        field_vector
+            .iter()
+            .find(|field_pair| {
+                field_pair.top_field == *field_name || field_pair.bottom_field == *field_name
+            })
+            .is_some()
+    });
+
+    match result {
+        Some((folder_type, _)) => Some(folder_type.clone()),
+        None => None,
     }
 }
 
 pub(crate) fn build_field_maps(struct_map: &mut StructMap) {
-    for (struct_name, struct_data) in struct_map {
-        build_all_field_types(
-            &struct_name,
-            &struct_data.field_to_abs_path_map,
-            &mut struct_data.type_to_field_map,
-            &|path_field| match path_field {
-                AbsolutePathField::NonStruct(field_data) => Some((field_data.ty_string.clone(), field_data.name.clone())),
-                AbsolutePathField::Struct(_) => None,
-            },
-        );
+    for (_, struct_data) in struct_map {
+        // Start by finding all fields in the field to abs path map
+        for (field_name, abs_paths) in struct_data.field_to_field_abs_path_map.iter() {
+            if let Some(abs_path) = abs_paths.first() {
+                // Begin with fields
+                if let Some(first_field) = abs_path.first() {
+                    // Filter out folders
+                    let field_type = match first_field {
+                        AbsolutePathField::NonStruct(field_data) => {
+                            Some(field_data.ty_string.clone())
+                        }
+                        AbsolutePathField::Struct(_) => None,
+                    };
 
-        eprintln!("{} {:?}", struct_name, struct_data.child_struct_to_field_map);
+                    if let Some(field_type) = field_type {
+                        // find the field name in the type map and insert the field name if it
+                        // doesn't already exist
+                        let field_vector = struct_data
+                            .type_to_field_map
+                            .entry(field_type)
+                            .or_insert(Vec::new());
+
+                        if !field_vector.contains(&field_name) {
+                            field_vector.push(field_name.clone());
+                        }
+                    }
+                }
+
+                if let Some(last_field) = abs_path.last() {
+                    // Then all fields parent struct types
+                    let parent_struct_type = get_parent_struct_type(abs_path);
+                    let (bottom_field_name, _) = last_field.name_type_pair();
+                    if let Some(parent_struct_type) = parent_struct_type {
+                        // find the field name in the type map and insert the field name if it
+                        // doesn't already exist
+                        let field_vector = struct_data
+                            .folder_to_field_map
+                            .entry(parent_struct_type)
+                            .or_insert(Vec::new());
+
+                        let field_pair = FieldPair {
+                            top_field: field_name.clone(),
+                            bottom_field: bottom_field_name,
+                        };
+
+                        if !field_vector.contains(&field_pair) {
+                            field_vector.push(field_pair);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

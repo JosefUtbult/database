@@ -43,6 +43,31 @@ impl Debug for AbsolutePathField {
     }
 }
 
+pub(crate) fn get_parent_struct_type(abs_path: &AbsolutePath) -> Option<String> {
+    for field in abs_path.iter().rev() {
+        match field {
+            AbsolutePathField::Struct((_, struct_data)) => return Some(struct_data.name.clone()),
+            AbsolutePathField::NonStruct(_) => {}
+        }
+    }
+    None
+}
+
+pub(crate) fn get_field_name_and_type(abs_path: &AbsolutePath) -> Option<(String, String)> {
+    if let Some(last) = abs_path.last() {
+        match last {
+            AbsolutePathField::NonStruct(field_data) => {
+                Some((field_data.name.clone(), field_data.ty_string.clone()))
+            }
+            AbsolutePathField::Struct((field_name, struct_data)) => {
+                Some((field_name.clone(), struct_data.name.clone()))
+            }
+        }
+    } else {
+        None
+    }
+}
+
 pub(crate) fn compare_abs_paths(
     lhs_abs_path: &[AbsolutePathField],
     rhs_abs_path: &[AbsolutePathField],
