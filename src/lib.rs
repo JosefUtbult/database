@@ -22,6 +22,8 @@ pub use data_field_accessor::*;
 mod subscriber;
 pub use subscriber::*;
 
+#[cfg(test)]
 mod test_types;
-#[allow(unused_imports)]
+
+#[cfg(test)]
 use test_types::*;

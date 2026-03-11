@@ -284,16 +284,14 @@ mod test {
     use heapless::Vec;
 
     use crate::{
-        SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
-        database_traits::AllVariants,
+        AllVariants, SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
         mutex::test_mutex::Mutex,
-        test::MyDatabaseDescription,
-        test_types::test_types::{MY_DATA_FLAT_VARIANT_COUNT, MyDataFlatKeys},
+        test_types::{TEST_FLAT_DATABASE_COUNT, TestFlatDatabaseDescription, flat::MyFlatKeys},
     };
 
     struct MySubscriber {
         was_notified: AtomicBool,
-        subscribed_params: Vec<MyDataFlatKeys, 3>,
+        subscribed_params: Vec<MyFlatKeys, 3>,
     }
 
     impl MySubscriber {
@@ -305,8 +303,8 @@ mod test {
         }
     }
 
-    impl Subscriber<MyDataFlatKeys> for MySubscriber {
-        fn on_change(&self, parameter_changes: &[MyDataFlatKeys]) {
+    impl Subscriber<MyFlatKeys> for MySubscriber {
+        fn on_change(&self, parameter_changes: &[MyFlatKeys]) {
             for parameter in parameter_changes {
                 if !self.subscribed_params.contains(parameter) {
                     panic!("Got unsubscribed parameter {:?}", parameter);
@@ -318,7 +316,7 @@ mod test {
     }
 
     type MySubscriberData<'a> =
-        SubscriberData<'a, Mutex, MyDatabaseDescription, MY_DATA_FLAT_VARIANT_COUNT>;
+        SubscriberData<'a, Mutex, TestFlatDatabaseDescription, TEST_FLAT_DATABASE_COUNT>;
 
     #[test]
     fn create_subscriber_data() {
@@ -331,7 +329,7 @@ mod test {
 
         let subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
+            .subscribe(&my_subscriber, MyFlatKeys::Param1)
             .unwrap();
     }
 
@@ -340,15 +338,15 @@ mod test {
         let mut my_subscriber = MySubscriber::new();
         my_subscriber
             .subscribed_params
-            .push(MyDataFlatKeys::Param1)
+            .push(MyFlatKeys::Param1)
             .unwrap();
 
         let subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
+            .subscribe(&my_subscriber, MyFlatKeys::Param1)
             .unwrap();
 
-        subscriber_data.on_change(MyDataFlatKeys::Param1);
+        subscriber_data.on_change(MyFlatKeys::Param1);
         subscriber_data.notify_subscribers();
 
         assert!(my_subscriber.was_notified.load(Ordering::SeqCst));
@@ -360,29 +358,27 @@ mod test {
 
         let mut subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
+            .subscribe(&my_subscriber, MyFlatKeys::Param1)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
 
         subscriber_data
-            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
+            .subscribe(&my_subscriber, MyFlatKeys::Param1)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
 
         subscriber_data.data.with(|data| {
-            let key_to_subscriber_vec = data
-                .key_to_subscriber_map
-                .get(&MyDataFlatKeys::Param1)
-                .unwrap();
+            let key_to_subscriber_vec =
+                data.key_to_subscriber_map.get(&MyFlatKeys::Param1).unwrap();
             let subscriber_to_key_vec = data.subscriber_to_key_map.get(&0).unwrap();
 
             assert_eq!(key_to_subscriber_vec.len(), 1);
             assert_eq!(subscriber_to_key_vec.len(), 1);
 
             assert_eq!(key_to_subscriber_vec[0], 0);
-            assert_eq!(subscriber_to_key_vec[0], MyDataFlatKeys::Param1);
+            assert_eq!(subscriber_to_key_vec[0], MyFlatKeys::Param1);
         });
     }
 
@@ -392,13 +388,13 @@ mod test {
 
         let mut subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
+            .subscribe(&my_subscriber, MyFlatKeys::Param1)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
 
         subscriber_data
-            .subscribe(&my_subscriber, MyDataFlatKeys::Param2)
+            .subscribe(&my_subscriber, MyFlatKeys::Param2)
             .unwrap();
 
         assert_eq!(subscriber_data.subscribers.get_mut().len(), 1);
@@ -409,15 +405,15 @@ mod test {
         let mut my_subscriber = MySubscriber::new();
         my_subscriber
             .subscribed_params
-            .push(MyDataFlatKeys::Param1)
+            .push(MyFlatKeys::Param1)
             .unwrap();
 
         let subscriber_data = MySubscriberData::new();
         subscriber_data
-            .subscribe(&my_subscriber, MyDataFlatKeys::Param1)
+            .subscribe(&my_subscriber, MyFlatKeys::Param1)
             .unwrap();
 
-        subscriber_data.on_change(MyDataFlatKeys::Param2);
+        subscriber_data.on_change(MyFlatKeys::Param2);
         subscriber_data.notify_subscribers();
 
         assert!(!my_subscriber.was_notified.load(Ordering::SeqCst));
@@ -436,12 +432,12 @@ mod test {
             std::println!("Index {}", counter);
             counter += 1;
 
-            for key in MyDataFlatKeys::ALL_VARIANTS.iter() {
+            for key in MyFlatKeys::ALL_VARIANTS.iter() {
                 subscriber_data.subscribe(subscriber, *key).unwrap();
             }
         }
 
-        let res = subscriber_data.subscribe(&last_subscriber, MyDataFlatKeys::Param1);
+        let res = subscriber_data.subscribe(&last_subscriber, MyFlatKeys::Param1);
         assert!(matches!(res, Err(SubscriberError::Overflow)));
     }
 }

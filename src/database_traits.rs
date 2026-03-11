@@ -54,10 +54,18 @@ where
 pub trait FlatDatabaseDescription {
     type Key: AbsKeyConstraints + FlatKeyConstraints<Self::Key>;
     type Field: AbsFieldConstraints<Self::Key> + FlatFieldConstraints<Self::Field, Self::Key>;
-    type Folder: AbsFolderConstraints + FlatFolderConstraints<Self::Folder>;
-
     type Data: DataFieldAccessor<Self::Key, Self::Field>;
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DummyFolder {}
+
+impl VariantCount for DummyFolder {
+    const COUNT: usize = 0;
+}
+
+impl AbsFolderConstraints for DummyFolder {}
+impl FlatFolderConstraints<DummyFolder> for DummyFolder {}
 
 impl<Database: FlatDatabaseDescription> DatabaseDescription for Database
 where
@@ -65,9 +73,9 @@ where
 {
     type AbsKey = Database::Key;
     type AbsField = Database::Field;
-    type AbsFolder = Database::Folder;
+    type AbsFolder = DummyFolder;
     type FlatKey = Database::Key;
     type FlatField = Database::Field;
-    type FlatFolder = Database::Folder;
+    type FlatFolder = DummyFolder;
     type Data = Database::Data;
 }

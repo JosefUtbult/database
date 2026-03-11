@@ -72,34 +72,26 @@ where
 #[cfg(test)]
 pub(crate) mod test {
     use crate::{
-        DatabaseDescription, LayerDatabase,
+        LayerDatabase,
+        layer::{
+            MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields,
+        },
         mutex::test_mutex::Mutex,
         test_data_field_accessor::{InnerFocus, MyFocusHandler},
-        test_types::test_types::{
-            MY_DATA_ABS_VARIANT_COUNT, MY_DATA_FLAT_VARIANT_COUNT, MyDataAbsFields,
-            MyDataAbsFolders, MyDataAbsKeys, MyDataFlatFields, MyDataFlatFolders, MyDataFlatKeys,
-            MyInnerDataFields, MyInnerDataAbsKeys, MyLayerData,
+        test_types::{
+            TEST_LAYER_DATABASE_ABS_COUNT, TEST_LAYER_DATABASE_FLAT_COUNT,
+            TestLayerDatabaseDescription,
+            layer::{MyInnerDataKeys, MyLayerData},
         },
     };
-
-    pub(crate) struct MyDatabaseDescription {}
-    impl DatabaseDescription for MyDatabaseDescription {
-        type AbsKey = MyDataAbsKeys;
-        type AbsField = MyDataAbsFields;
-        type AbsFolder = MyDataAbsFolders;
-        type FlatKey = MyDataFlatKeys;
-        type FlatField = MyDataFlatFields;
-        type FlatFolder = MyDataFlatFolders;
-        type Data = MyLayerData;
-    }
 
     type MyDatabase<'a> = LayerDatabase<
         'a,
         MyFocusHandler,
         Mutex,
-        MyDatabaseDescription,
-        MY_DATA_ABS_VARIANT_COUNT,
-        MY_DATA_FLAT_VARIANT_COUNT,
+        TestLayerDatabaseDescription,
+        TEST_LAYER_DATABASE_ABS_COUNT,
+        TEST_LAYER_DATABASE_FLAT_COUNT,
     >;
 
     fn build_database<'a>() -> MyDatabase<'a> {
@@ -154,10 +146,10 @@ pub(crate) mod test {
             .unwrap();
 
         let res1 = database
-            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataAbsKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4))
             .unwrap();
         let res2 = database
-            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataAbsKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4))
             .unwrap();
 
         std::println!(
@@ -213,10 +205,10 @@ pub(crate) mod test {
         database.set(MyDataFlatFields::Param4(2)).unwrap();
 
         let res1 = database
-            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataAbsKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4))
             .unwrap();
         let res2 = database
-            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataAbsKeys::Param4))
+            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4))
             .unwrap();
 
         assert!(matches!(res1, MyDataFlatFields::Param4(1)));

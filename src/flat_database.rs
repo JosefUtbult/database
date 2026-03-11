@@ -64,27 +64,19 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        FlatDatabase, FlatDatabaseDescription,
+        FlatDatabase,
         mutex::test_mutex::Mutex,
-        test_types::test_types::{
-            MY_DATA_FLAT_VARIANT_COUNT, MyDataFlatFields, MyDataFlatFolders, MyDataFlatKeys,
-            MyFlatData,
+        test_types::{
+            TEST_FLAT_DATABASE_COUNT, TestFlatDatabaseDescription, create_test_flat_data,
+            flat::{MyFlatFields, MyFlatKeys},
         },
     };
 
-    struct MyDatabaseDescription {}
-    impl FlatDatabaseDescription for MyDatabaseDescription {
-        type Key = MyDataFlatKeys;
-        type Field = MyDataFlatFields;
-        type Folder = MyDataFlatFolders;
-        type Data = MyFlatData;
-    }
-
     type MyDatabase<'a> =
-        FlatDatabase<'a, Mutex, MyDatabaseDescription, MY_DATA_FLAT_VARIANT_COUNT>;
+        FlatDatabase<'a, Mutex, TestFlatDatabaseDescription, TEST_FLAT_DATABASE_COUNT>;
 
     fn build_database<'a>() -> MyDatabase<'a> {
-        MyDatabase::new(MyFlatData::new())
+        MyDatabase::new(create_test_flat_data())
     }
 
     #[test]
@@ -95,20 +87,20 @@ mod test {
     #[test]
     fn set_data() {
         let database = build_database();
-        database.set(MyDataFlatFields::Param1(1)).unwrap();
+        database.set(MyFlatFields::Param1(1)).unwrap();
     }
 
     #[test]
     fn get_data() {
         let database = build_database();
-        let _ = database.get(MyDataFlatKeys::Param1).unwrap();
+        let _ = database.get(MyFlatKeys::Param1).unwrap();
     }
 
     #[test]
     fn set_get_data() {
         let database = build_database();
-        database.set(MyDataFlatFields::Param1(1)).unwrap();
-        let res = database.get(MyDataFlatKeys::Param1).unwrap();
-        assert!(matches!(res, MyDataFlatFields::Param1(1)));
+        database.set(MyFlatFields::Param1(1)).unwrap();
+        let res = database.get(MyFlatKeys::Param1).unwrap();
+        assert!(matches!(res, MyFlatFields::Param1(1)));
     }
 }
