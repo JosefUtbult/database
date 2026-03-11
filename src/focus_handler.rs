@@ -1,18 +1,35 @@
-use crate::DatabaseDescription;
+use crate::{DatabaseDescription, Pair};
 
-pub trait FocusHandler<Database: DatabaseDescription>
-{
+pub trait FocusHandler<Database: DatabaseDescription> {
     fn get_focus_key(&self, key: Database::FlatKey) -> Database::AbsKey;
     fn get_focus_field(&self, field: Database::FlatField) -> Database::AbsField;
 }
 
-pub trait FolderFocusDescription<Database: DatabaseDescription>
+pub trait FocusConstraints: Eq + Clone + Copy {}
+
+pub trait ToFull<AbsEnum, InternalAbsEnum> {
+    fn build_full(&self, internal: InternalAbsEnum) -> AbsEnum;
+}
+
+pub trait PathConstraints<AbsPair: Pair, InternalAbsPair: Pair>:
+    Eq
+    + Clone
+    + Copy
+    + ToFull<AbsPair::Key, InternalAbsPair::Key>
+    + ToFull<AbsPair::Field, InternalAbsPair::Field>
 {
 }
 
-pub trait FolderFocus<Database: DatabaseDescription>
+pub trait FolderFocus<
+    Focus: FocusConstraints,
+    Path: PathConstraints<AbsPair, InternalAbsPair>,
+    AbsPair: Pair,
+    InternalAbsPair: Pair,
+>
 {
-
+    fn get_focus(&self) -> Focus;
+    fn set_focus(&self, focus: Focus);
+    fn get_focus_path(&self) -> Path;
 }
 
 #[cfg(test)]
@@ -20,12 +37,15 @@ pub(crate) mod test_data_field_accessor {
     use core::sync::atomic::{AtomicU8, Ordering};
 
     use crate::{
-        FocusHandler,
+        FocusHandler, FolderFocus, ToFull,
         test_types::{
             TestLayerDatabaseDescription,
             layer::{
                 MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys,
-                MyInnerDataFields, MyInnerDataKeys, MyInnerInnerDataFields, MyInnerInnerDataKeys,
+                MyInnerData_MyInnerInnerData_FolderPath, MyInnerDataFields, MyInnerDataFocus,
+                MyInnerDataKeys, MyInnerInnerDataFields, MyInnerInnerDataFocus,
+                MyInnerInnerDataKeys, MyLayerData_MyInnerData_FolderPath,
+                MyLayerData_MyInnerInnerData_FolderPath,
             },
         },
     };
@@ -96,27 +116,6 @@ pub(crate) mod test_data_field_accessor {
                 inner_inner_focus: AtomicU8::new(0),
             }
         }
-
-        pub(crate) fn set_inner_focus(&self, inner_focus: InnerFocus) {
-            self.inner_focus.store(inner_focus.into(), Ordering::SeqCst);
-        }
-
-        pub(crate) fn get_inner_focus(&self) -> InnerFocus {
-            self.inner_focus.load(Ordering::SeqCst).try_into().unwrap()
-        }
-
-        #[allow(dead_code)]
-        pub(crate) fn set_inner_inner_focus(&self, inner_inner_focus: InnerInnerFocus) {
-            self.inner_inner_focus
-                .store(inner_inner_focus.into(), Ordering::SeqCst);
-        }
-
-        pub(crate) fn get_inner_inner_focus(&self) -> InnerInnerFocus {
-            self.inner_inner_focus
-                .load(Ordering::SeqCst)
-                .try_into()
-                .unwrap()
-        }
     }
 
     impl FocusHandler<TestLayerDatabaseDescription> for MyFocusHandler {
@@ -125,42 +124,22 @@ pub(crate) mod test_data_field_accessor {
                 MyDataFlatKeys::Param1 => MyDataAbsKeys::Param1,
                 MyDataFlatKeys::Param2 => MyDataAbsKeys::Param2,
                 MyDataFlatKeys::Param3 => MyDataAbsKeys::Param3,
-                MyDataFlatKeys::Param4 | MyDataFlatKeys::Param5 | MyDataFlatKeys::Param6 => {
-                    match self.get_inner_focus() {
-                        InnerFocus::One => match key {
-                            MyDataFlatKeys::Param4 => {
-                                MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4)
-                            }
-                            MyDataFlatKeys::Param5 => {
-                                MyDataAbsKeys::Inner1(MyInnerDataKeys::Param5)
-                            }
-                            MyDataFlatKeys::Param6 => match self.get_inner_inner_focus() {
-                                InnerInnerFocus::Three => MyDataAbsKeys::Inner1(
-                                    MyInnerDataKeys::Inner3(MyInnerInnerDataKeys::Param6),
-                                ),
-                                InnerInnerFocus::Four => MyDataAbsKeys::Inner1(
-                                    MyInnerDataKeys::Inner4(MyInnerInnerDataKeys::Param6),
-                                ),
-                            },
-                            _ => unreachable!(),
-                        },
-                        InnerFocus::Two => match key {
-                            MyDataFlatKeys::Param4 => {
-                                MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4)
-                            }
-                            MyDataFlatKeys::Param5 => {
-                                MyDataAbsKeys::Inner2(MyInnerDataKeys::Param5)
-                            }
-                            MyDataFlatKeys::Param6 => match self.get_inner_inner_focus() {
-                                InnerInnerFocus::Three => MyDataAbsKeys::Inner2(
-                                    MyInnerDataKeys::Inner3(MyInnerInnerDataKeys::Param6),
-                                ),
-                                InnerInnerFocus::Four => MyDataAbsKeys::Inner2(
-                                    MyInnerDataKeys::Inner4(MyInnerInnerDataKeys::Param6),
-                                ),
-                            },
-                            _ => unreachable!(),
-                        },
+                MyDataFlatKeys::Param4 | MyDataFlatKeys::Param5 => {
+                    let folder_path: MyLayerData_MyInnerData_FolderPath = self.get_focus_path();
+                    match key {
+                        MyDataFlatKeys::Param4 => folder_path.build_full(MyInnerDataKeys::Param4),
+                        MyDataFlatKeys::Param5 => folder_path.build_full(MyInnerDataKeys::Param5),
+                        _ => unreachable!(),
+                    }
+                }
+                MyDataFlatKeys::Param6 => {
+                    let folder_path: MyLayerData_MyInnerInnerData_FolderPath =
+                        self.get_focus_path();
+                    match key {
+                        MyDataFlatKeys::Param6 => {
+                            folder_path.build_full(MyInnerInnerDataKeys::Param6)
+                        }
+                        _ => unreachable!(),
                     }
                 }
             }
@@ -171,44 +150,115 @@ pub(crate) mod test_data_field_accessor {
                 MyDataFlatFields::Param1(value) => MyDataAbsFields::Param1(value),
                 MyDataFlatFields::Param2(value) => MyDataAbsFields::Param2(value),
                 MyDataFlatFields::Param3(value) => MyDataAbsFields::Param3(value),
-                MyDataFlatFields::Param4(_)
-                | MyDataFlatFields::Param5(_)
-                | MyDataFlatFields::Param6(_) => match self.get_inner_focus() {
-                    InnerFocus::One => match field {
+                MyDataFlatFields::Param4(_) | MyDataFlatFields::Param5(_) => {
+                    let folder_path: MyLayerData_MyInnerData_FolderPath = self.get_focus_path();
+
+                    match field {
                         MyDataFlatFields::Param4(value) => {
-                            MyDataAbsFields::Inner1(MyInnerDataFields::Param4(value))
+                            folder_path.build_full(MyInnerDataFields::Param4(value))
                         }
                         MyDataFlatFields::Param5(value) => {
-                            MyDataAbsFields::Inner1(MyInnerDataFields::Param5(value))
+                            folder_path.build_full(MyInnerDataFields::Param5(value))
                         }
-                        MyDataFlatFields::Param6(value) => match self.get_inner_inner_focus() {
-                            InnerInnerFocus::Three => MyDataAbsFields::Inner1(
-                                MyInnerDataFields::Inner3(MyInnerInnerDataFields::Param6(value)),
-                            ),
-                            InnerInnerFocus::Four => MyDataAbsFields::Inner1(
-                                MyInnerDataFields::Inner4(MyInnerInnerDataFields::Param6(value)),
-                            ),
-                        },
                         _ => unreachable!(),
-                    },
-                    InnerFocus::Two => match field {
-                        MyDataFlatFields::Param4(value) => {
-                            MyDataAbsFields::Inner2(MyInnerDataFields::Param4(value))
+                    }
+                }
+                MyDataFlatFields::Param6(_) => {
+                    let folder_path: MyLayerData_MyInnerInnerData_FolderPath =
+                        self.get_focus_path();
+
+                    match field {
+                        MyDataFlatFields::Param6(value) => {
+                            folder_path.build_full(MyInnerInnerDataFields::Param6(value))
                         }
-                        MyDataFlatFields::Param5(value) => {
-                            MyDataAbsFields::Inner2(MyInnerDataFields::Param5(value))
-                        }
-                        MyDataFlatFields::Param6(value) => match self.get_inner_inner_focus() {
-                            InnerInnerFocus::Three => MyDataAbsFields::Inner2(
-                                MyInnerDataFields::Inner3(MyInnerInnerDataFields::Param6(value)),
-                            ),
-                            InnerInnerFocus::Four => MyDataAbsFields::Inner2(
-                                MyInnerDataFields::Inner4(MyInnerInnerDataFields::Param6(value)),
-                            ),
-                        },
                         _ => unreachable!(),
-                    },
-                },
+                    }
+                }
+            }
+        }
+    }
+
+    impl
+        FolderFocus<
+            MyInnerInnerDataFocus,
+            MyLayerData_MyInnerInnerData_FolderPath,
+            (MyDataAbsKeys, MyDataAbsFields),
+            (MyInnerInnerDataKeys, MyInnerInnerDataFields),
+        > for MyFocusHandler
+    {
+        fn get_focus(&self) -> MyInnerInnerDataFocus {
+            self.inner_inner_focus
+                .load(Ordering::SeqCst)
+                .try_into()
+                .unwrap()
+        }
+
+        fn set_focus(&self, focus: MyInnerInnerDataFocus) {
+            self.inner_inner_focus.store(focus.into(), Ordering::SeqCst);
+        }
+
+        fn get_focus_path(&self) -> MyLayerData_MyInnerInnerData_FolderPath {
+            let inner_focus: MyInnerDataFocus = self.get_focus();
+
+            match inner_focus {
+                MyInnerDataFocus::Inner1 | MyInnerDataFocus::Inner2 => {
+                    let inner_inner_focus: MyInnerInnerDataFocus = self.get_focus();
+
+                    match inner_inner_focus {
+                        MyInnerInnerDataFocus::Inner3 => {
+                            match inner_focus {
+                                MyInnerDataFocus::Inner1 => {
+                                    MyLayerData_MyInnerInnerData_FolderPath::Inner1(
+                                        MyInnerData_MyInnerInnerData_FolderPath::Inner3,
+                                    )
+                                },
+                                MyInnerDataFocus::Inner2 => {
+                                    MyLayerData_MyInnerInnerData_FolderPath::Inner2(
+                                        MyInnerData_MyInnerInnerData_FolderPath::Inner3,
+                                    )
+                                },
+                            }
+                        }
+                        MyInnerInnerDataFocus::Inner4 => {
+                            match inner_focus {
+                                MyInnerDataFocus::Inner1 => {
+                                    MyLayerData_MyInnerInnerData_FolderPath::Inner1(
+                                        MyInnerData_MyInnerInnerData_FolderPath::Inner4,
+                                    )
+                                },
+                                MyInnerDataFocus::Inner2 => {
+                                    MyLayerData_MyInnerInnerData_FolderPath::Inner2(
+                                        MyInnerData_MyInnerInnerData_FolderPath::Inner4,
+                                    )
+                                },
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    impl
+        FolderFocus<
+            MyInnerDataFocus,
+            MyLayerData_MyInnerData_FolderPath,
+            (MyDataAbsKeys, MyDataAbsFields),
+            (MyInnerDataKeys, MyInnerDataFields),
+        > for MyFocusHandler
+    {
+        fn get_focus(&self) -> MyInnerDataFocus {
+            self.inner_focus.load(Ordering::SeqCst).try_into().unwrap()
+        }
+
+        fn set_focus(&self, focus: MyInnerDataFocus) {
+            self.inner_focus.store(focus.into(), Ordering::SeqCst);
+        }
+
+        fn get_focus_path(&self) -> MyLayerData_MyInnerData_FolderPath {
+            match self.get_focus() {
+                MyInnerDataFocus::Inner1 => MyLayerData_MyInnerData_FolderPath::Inner1,
+                MyInnerDataFocus::Inner2 => MyLayerData_MyInnerData_FolderPath::Inner2,
             }
         }
     }

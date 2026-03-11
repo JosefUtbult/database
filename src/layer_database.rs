@@ -69,15 +69,16 @@ impl<
 pub(crate) mod test {
     use crate::{
         LayerDatabase,
+        focus_handler::FolderFocus,
         layer::{
             MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields,
         },
         mutex::test_mutex::Mutex,
-        test_data_field_accessor::{InnerFocus, MyFocusHandler},
+        test_data_field_accessor::MyFocusHandler,
         test_types::{
             TEST_LAYER_DATABASE_ABS_COUNT, TEST_LAYER_DATABASE_FLAT_COUNT,
             TestLayerDatabaseDescription,
-            layer::{MyInnerDataKeys, MyLayerData},
+            layer::{MyInnerDataFocus, MyInnerDataKeys, MyLayerData},
         },
     };
 
@@ -196,13 +197,14 @@ pub(crate) mod test {
 
         database
             .get_focus_handler()
-            .set_inner_focus(InnerFocus::Two);
+            .set_focus(MyInnerDataFocus::Inner2);
 
         database.set(MyDataFlatFields::Param4(2)).unwrap();
 
         let res1 = database
             .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4))
             .unwrap();
+
         let res2 = database
             .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4))
             .unwrap();
@@ -218,13 +220,13 @@ pub(crate) mod test {
 
         database.set(MyDataFlatFields::Param4(1)).unwrap();
 
-        focus_handler.set_inner_focus(InnerFocus::Two);
+        focus_handler.set_focus(MyInnerDataFocus::Inner2);
         database.set(MyDataFlatFields::Param4(2)).unwrap();
 
-        focus_handler.set_inner_focus(InnerFocus::One);
+        focus_handler.set_focus(MyInnerDataFocus::Inner1);
         let res1 = database.get(MyDataFlatKeys::Param4).unwrap();
 
-        focus_handler.set_inner_focus(InnerFocus::Two);
+        focus_handler.set_focus(MyInnerDataFocus::Inner2);
         let res2 = database.get(MyDataFlatKeys::Param4).unwrap();
 
         assert!(matches!(res1, MyDataFlatFields::Param4(1)));

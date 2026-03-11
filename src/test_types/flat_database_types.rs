@@ -1,5 +1,3 @@
-use crate::FlatDatabaseDescription;
-
 pub(crate) mod flat {
     use crate::{
         AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
@@ -179,9 +177,4 @@ pub(crate) fn create_test_flat_data() -> flat::MyFlatData {
     flat::MyFlatData::new()
 }
 
-pub(crate) struct TestFlatDatabaseDescription {}
-impl FlatDatabaseDescription for TestFlatDatabaseDescription {
-    type Key = flat::MyFlatKeys;
-    type Field = flat::MyFlatFields;
-    type Data = flat::MyFlatData;
-}
+pub(crate) type TestFlatDatabaseDescription = ((flat::MyFlatKeys, flat::MyFlatFields), flat::MyFlatData);

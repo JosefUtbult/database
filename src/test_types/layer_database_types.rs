@@ -1,10 +1,8 @@
-use crate::DatabaseDescription;
-
 pub(crate) mod layer {
     use crate::{
-        AbsFieldConstraints, AbsFolderConstraints, AbsKeyConstraints, AccessorError, AllVariants,
-        DataFieldAccessor, DataFieldTryAccessor, FlatFieldConstraints, FlatFolderConstraints,
-        FlatKeyConstraints, ToFromUsize, ToKey, VariantCount,
+        AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
+        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, FocusConstraints,
+        PathConstraints, ToFromUsize, ToFull, ToKey, VariantCount,
     };
 
     pub(crate) struct MyInnerInnerData {
@@ -81,9 +79,10 @@ pub(crate) mod layer {
         Inner4(MyInnerInnerDataFields),
     }
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     #[allow(dead_code)]
-    pub(crate) enum MyInnerDataFolders {
+    #[allow(non_camel_case_types)]
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyInnerData_MyInnerInnerData_FolderPath {
         Inner3,
         Inner4,
     }
@@ -107,13 +106,36 @@ pub(crate) mod layer {
         Inner2(MyInnerDataFields),
     }
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
     #[allow(dead_code)]
-    pub(crate) enum MyDataAbsFolders {
+    #[allow(non_camel_case_types)]
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyInnerInnerDataFocus {
+        Inner3,
+        Inner4,
+    }
+
+    #[allow(dead_code)]
+    #[allow(non_camel_case_types)]
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyInnerDataFocus {
         Inner1,
-        InInner1(MyInnerDataFolders),
         Inner2,
-        InInner2(MyInnerDataFolders),
+    }
+
+    #[allow(dead_code)]
+    #[allow(non_camel_case_types)]
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyLayerData_MyInnerInnerData_FolderPath {
+        Inner1(MyInnerData_MyInnerInnerData_FolderPath),
+        Inner2(MyInnerData_MyInnerInnerData_FolderPath),
+    }
+
+    #[allow(dead_code)]
+    #[allow(non_camel_case_types)]
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+    pub(crate) enum MyLayerData_MyInnerData_FolderPath {
+        Inner1,
+        Inner2,
     }
 
     #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -134,14 +156,6 @@ pub(crate) mod layer {
         Param4(u8),
         Param5(bool),
         Param6(u8),
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyDataFlatFolders {
-        Inner1,
-        Inner2,
-        Inner3,
-        Inner4,
     }
 
     impl ToKey<MyInnerInnerDataKeys> for MyInnerInnerDataFields {
@@ -253,16 +267,98 @@ pub(crate) mod layer {
         }
     }
 
-    impl From<MyDataAbsFolders> for MyDataFlatFolders {
-        fn from(value: MyDataAbsFolders) -> Self {
+    impl ToFull<MyInnerDataKeys, MyInnerInnerDataKeys> for MyInnerData_MyInnerInnerData_FolderPath {
+        fn build_full(&self, internal: MyInnerInnerDataKeys) -> MyInnerDataKeys {
+            match self {
+                Self::Inner3 => MyInnerDataKeys::Inner3(internal),
+                Self::Inner4 => MyInnerDataKeys::Inner3(internal),
+            }
+        }
+    }
+
+    impl ToFull<MyInnerDataFields, MyInnerInnerDataFields> for MyInnerData_MyInnerInnerData_FolderPath {
+        fn build_full(&self, internal: MyInnerInnerDataFields) -> MyInnerDataFields {
+            match self {
+                Self::Inner3 => MyInnerDataFields::Inner3(internal),
+                Self::Inner4 => MyInnerDataFields::Inner3(internal),
+            }
+        }
+    }
+
+    impl ToFull<MyDataAbsKeys, MyInnerDataKeys> for MyLayerData_MyInnerData_FolderPath {
+        fn build_full(&self, internal: MyInnerDataKeys) -> MyDataAbsKeys {
+            match self {
+                Self::Inner1 => MyDataAbsKeys::Inner1(internal),
+                Self::Inner2 => MyDataAbsKeys::Inner2(internal),
+            }
+        }
+    }
+
+    impl ToFull<MyDataAbsFields, MyInnerDataFields> for MyLayerData_MyInnerData_FolderPath {
+        fn build_full(&self, internal: MyInnerDataFields) -> MyDataAbsFields {
+            match self {
+                Self::Inner1 => MyDataAbsFields::Inner1(internal),
+                Self::Inner2 => MyDataAbsFields::Inner2(internal),
+            }
+        }
+    }
+
+    impl ToFull<MyDataAbsKeys, MyInnerInnerDataKeys> for MyLayerData_MyInnerInnerData_FolderPath {
+        fn build_full(&self, internal: MyInnerInnerDataKeys) -> MyDataAbsKeys {
+            match self {
+                Self::Inner1(inner) => MyDataAbsKeys::Inner1(inner.build_full(internal)),
+                Self::Inner2(inner) => MyDataAbsKeys::Inner2(inner.build_full(internal)),
+            }
+        }
+    }
+
+    impl ToFull<MyDataAbsFields, MyInnerInnerDataFields> for MyLayerData_MyInnerInnerData_FolderPath {
+        fn build_full(&self, internal: MyInnerInnerDataFields) -> MyDataAbsFields {
+            match self {
+                Self::Inner1(inner) => MyDataAbsFields::Inner1(inner.build_full(internal)),
+                Self::Inner2(inner) => MyDataAbsFields::Inner2(inner.build_full(internal)),
+            }
+        }
+    }
+
+    impl From<MyInnerInnerDataFocus> for u8 {
+        fn from(value: MyInnerInnerDataFocus) -> Self {
             match value {
-                MyDataAbsFolders::Inner1 => MyDataFlatFolders::Inner1,
-                MyDataAbsFolders::Inner2 => MyDataFlatFolders::Inner2,
-                MyDataAbsFolders::InInner1(inner_folder)
-                | MyDataAbsFolders::InInner2(inner_folder) => match inner_folder {
-                    MyInnerDataFolders::Inner3 => MyDataFlatFolders::Inner3,
-                    MyInnerDataFolders::Inner4 => MyDataFlatFolders::Inner4,
-                },
+                MyInnerInnerDataFocus::Inner3 => 0,
+                MyInnerInnerDataFocus::Inner4 => 1,
+            }
+        }
+    }
+
+    impl TryFrom<u8> for MyInnerInnerDataFocus {
+        type Error = ();
+
+        fn try_from(value: u8) -> Result<Self, Self::Error> {
+            match value {
+                0 => Ok(MyInnerInnerDataFocus::Inner3),
+                1 => Ok(MyInnerInnerDataFocus::Inner4),
+                _ => Err(()),
+            }
+        }
+    }
+
+    impl From<MyInnerDataFocus> for u8 {
+        fn from(value: MyInnerDataFocus) -> Self {
+            match value {
+                MyInnerDataFocus::Inner1 => 0,
+                MyInnerDataFocus::Inner2 => 1,
+            }
+        }
+    }
+
+    impl TryFrom<u8> for MyInnerDataFocus {
+        type Error = ();
+
+        fn try_from(value: u8) -> Result<Self, Self::Error> {
+            match value {
+                0 => Ok(MyInnerDataFocus::Inner1),
+                1 => Ok(MyInnerDataFocus::Inner2),
+                _ => Err(()),
             }
         }
     }
@@ -294,10 +390,6 @@ pub(crate) mod layer {
         const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
     }
 
-    impl VariantCount for MyDataAbsFolders {
-        const COUNT: usize = 2;
-    }
-
     pub(crate) const MY_DATA_FLAT_VARIANT_COUNT: usize = 6;
 
     impl VariantCount for MyDataFlatKeys {
@@ -308,21 +400,28 @@ pub(crate) mod layer {
         const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
     }
 
-    impl VariantCount for MyDataFlatFolders {
-        const COUNT: usize = 4;
-    }
-
     impl AbsKeyConstraints for MyDataAbsKeys {}
 
     impl AbsFieldConstraints<MyDataAbsKeys> for MyDataAbsFields {}
-
-    impl AbsFolderConstraints for MyDataAbsFolders {}
 
     impl FlatKeyConstraints<MyDataAbsKeys> for MyDataFlatKeys {}
 
     impl FlatFieldConstraints<MyDataAbsFields, MyDataFlatKeys> for MyDataFlatFields {}
 
-    impl FlatFolderConstraints<MyDataAbsFolders> for MyDataFlatFolders {}
+    impl FocusConstraints for MyInnerInnerDataFocus {}
+    impl FocusConstraints for MyInnerDataFocus {}
+
+    impl
+        PathConstraints<
+            (MyDataAbsKeys, MyDataAbsFields),
+            (MyInnerInnerDataKeys, MyInnerInnerDataFields),
+        > for MyLayerData_MyInnerInnerData_FolderPath
+    {
+    }
+    impl PathConstraints<(MyDataAbsKeys, MyDataAbsFields), (MyInnerDataKeys, MyInnerDataFields)>
+        for MyLayerData_MyInnerData_FolderPath
+    {
+    }
 
     impl DataFieldAccessor<MyInnerInnerDataKeys, MyInnerInnerDataFields> for MyInnerInnerData {
         fn get(&self, key: MyInnerInnerDataKeys) -> MyInnerInnerDataFields {
@@ -494,13 +593,8 @@ pub(crate) mod layer {
 pub(crate) const TEST_LAYER_DATABASE_ABS_COUNT: usize = layer::MY_DATA_ABS_VARIANT_COUNT;
 pub(crate) const TEST_LAYER_DATABASE_FLAT_COUNT: usize = layer::MY_DATA_FLAT_VARIANT_COUNT;
 
-pub(crate) struct TestLayerDatabaseDescription {}
-impl DatabaseDescription for TestLayerDatabaseDescription {
-    type AbsKey = layer::MyDataAbsKeys;
-    type AbsField = layer::MyDataAbsFields;
-    type AbsFolder = layer::MyDataAbsFolders;
-    type FlatKey = layer::MyDataFlatKeys;
-    type FlatField = layer::MyDataFlatFields;
-    type FlatFolder = layer::MyDataFlatFolders;
-    type Data = layer::MyLayerData;
-}
+pub(crate) type TestLayerDatabaseDescription = (
+    (layer::MyDataAbsKeys, layer::MyDataAbsFields),
+    (layer::MyDataFlatKeys, layer::MyDataFlatFields),
+    layer::MyLayerData,
+);
