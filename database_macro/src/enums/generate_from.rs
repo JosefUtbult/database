@@ -4,11 +4,13 @@ use proc_macro2::{Ident, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 
 use crate::{
-    casing::to_camel_case, data_structure::{
-        absolute_path::{get_field_name_and_type, AbsolutePath, AbsolutePathField},
+    DataStructure,
+    casing::to_camel_case,
+    data_structure::{
+        absolute_path::{AbsolutePath, AbsolutePathField, get_field_name_and_type},
         all_fields::find_folder_type,
         struct_data::{StructData, StructMap},
-    }, DataStructure
+    },
 };
 
 pub(crate) fn generate_abs_from(

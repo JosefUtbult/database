@@ -1,7 +1,14 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 
-use crate::{casing::to_camel_case, data_structure::{absolute_path::get_field_name_and_type, struct_data::{self, StructData}}, DataStructure};
+use crate::{
+    DataStructure,
+    casing::to_camel_case,
+    data_structure::{
+        absolute_path::get_field_name_and_type,
+        struct_data::{self, StructData},
+    },
+};
 
 fn generate_data_field_accessor(
     crate_path: &TokenStream2,
@@ -136,7 +143,15 @@ pub(crate) fn generate_data_field_accessors(
     struct_data: &StructData,
 ) -> TokenStream2 {
     let mut res = TokenStream2::new();
-    res.extend(generate_data_field_accessor(crate_path, data_structure, struct_data));
-    res.extend(generate_try_accessor(crate_path, data_structure, struct_data));
+    res.extend(generate_data_field_accessor(
+        crate_path,
+        data_structure,
+        struct_data,
+    ));
+    res.extend(generate_try_accessor(
+        crate_path,
+        data_structure,
+        struct_data,
+    ));
     res
 }

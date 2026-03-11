@@ -205,34 +205,30 @@ pub(crate) mod test_data_field_accessor {
                     let inner_inner_focus: MyInnerInnerDataFocus = self.get_focus();
 
                     match inner_inner_focus {
-                        MyInnerInnerDataFocus::Inner3 => {
-                            match inner_focus {
-                                MyInnerDataFocus::Inner1 => {
-                                    MyLayerData_MyInnerInnerData_FolderPath::Inner1(
-                                        MyInnerData_MyInnerInnerData_FolderPath::Inner3,
-                                    )
-                                },
-                                MyInnerDataFocus::Inner2 => {
-                                    MyLayerData_MyInnerInnerData_FolderPath::Inner2(
-                                        MyInnerData_MyInnerInnerData_FolderPath::Inner3,
-                                    )
-                                },
+                        MyInnerInnerDataFocus::Inner3 => match inner_focus {
+                            MyInnerDataFocus::Inner1 => {
+                                MyLayerData_MyInnerInnerData_FolderPath::Inner1(
+                                    MyInnerData_MyInnerInnerData_FolderPath::Inner3,
+                                )
                             }
-                        }
-                        MyInnerInnerDataFocus::Inner4 => {
-                            match inner_focus {
-                                MyInnerDataFocus::Inner1 => {
-                                    MyLayerData_MyInnerInnerData_FolderPath::Inner1(
-                                        MyInnerData_MyInnerInnerData_FolderPath::Inner4,
-                                    )
-                                },
-                                MyInnerDataFocus::Inner2 => {
-                                    MyLayerData_MyInnerInnerData_FolderPath::Inner2(
-                                        MyInnerData_MyInnerInnerData_FolderPath::Inner4,
-                                    )
-                                },
+                            MyInnerDataFocus::Inner2 => {
+                                MyLayerData_MyInnerInnerData_FolderPath::Inner2(
+                                    MyInnerData_MyInnerInnerData_FolderPath::Inner3,
+                                )
                             }
-                        }
+                        },
+                        MyInnerInnerDataFocus::Inner4 => match inner_focus {
+                            MyInnerDataFocus::Inner1 => {
+                                MyLayerData_MyInnerInnerData_FolderPath::Inner1(
+                                    MyInnerData_MyInnerInnerData_FolderPath::Inner4,
+                                )
+                            }
+                            MyInnerDataFocus::Inner2 => {
+                                MyLayerData_MyInnerInnerData_FolderPath::Inner2(
+                                    MyInnerData_MyInnerInnerData_FolderPath::Inner4,
+                                )
+                            }
+                        },
                     }
                 }
             }

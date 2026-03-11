@@ -177,4 +177,5 @@ pub(crate) fn create_test_flat_data() -> flat::MyFlatData {
     flat::MyFlatData::new()
 }
 
-pub(crate) type TestFlatDatabaseDescription = ((flat::MyFlatKeys, flat::MyFlatFields), flat::MyFlatData);
+pub(crate) type TestFlatDatabaseDescription =
+    ((flat::MyFlatKeys, flat::MyFlatFields), flat::MyFlatData);

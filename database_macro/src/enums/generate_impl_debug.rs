@@ -94,7 +94,7 @@ pub(crate) fn generate_abs_impl_debug(
         let in_folder_name = format_ident!("In{}", to_camel_case(&field.name));
 
         let child_struct_data = data_structure.struct_map.get(&field.ty_string).unwrap();
-        let child_abs_folder_enum =  &child_struct_data.type_names.abs_folder_enum;
+        let child_abs_folder_enum = &child_struct_data.type_names.abs_folder_enum;
 
         let key_string = format!(
             "{}::{}({{:?}})",

@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::data_structure::{absolute_path::{AbsolutePath, AbsolutePathField}, struct_data::StructMap};
+use crate::data_structure::{
+    absolute_path::{AbsolutePath, AbsolutePathField},
+    struct_data::StructMap,
+};
 
 pub(super) type FieldToFolderMap = HashMap<String, Vec<AbsolutePath>>;
 
@@ -21,7 +24,6 @@ pub(super) fn field_to_folder_map(struct_map: &mut StructMap) {
                     folder_paths.push(abs_path.clone());
                 }
             }
-
         }
     }
 }

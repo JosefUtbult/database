@@ -2,11 +2,14 @@ use proc_macro2::{Ident, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 
 use crate::{
-    casing::to_camel_case, data_structure::{
+    DataStructure,
+    casing::to_camel_case,
+    data_structure::{
         self,
-        absolute_path::{get_parent_struct_type, AbsolutePathField},
+        absolute_path::{AbsolutePathField, get_parent_struct_type},
         conditional_paths::{AllFolderFields, FolderFocusPath, FolderFocusPathVector},
-    }, enums::abs_path_to_token_stream, DataStructure
+    },
+    enums::abs_path_to_token_stream,
 };
 
 fn generate_folder_enums(
@@ -334,7 +337,12 @@ fn generate_trait_impl(crate_path: &TokenStream2, data_structure: &DataStructure
                 assert!(abs_path_vector.len() == 1);
 
                 let field_name = format_ident!("{}", to_camel_case(&field_pair.top_field));
-                let (abs_path_stream, _) = abs_path_to_token_stream(abs_path_vector.first().unwrap(), &None, &abs_key_enum, &abs_field_enum);
+                let (abs_path_stream, _) = abs_path_to_token_stream(
+                    abs_path_vector.first().unwrap(),
+                    &None,
+                    &abs_key_enum,
+                    &abs_field_enum,
+                );
 
                 key_matches.push(quote! {
                     #flat_key_enum::#field_name => #abs_path_stream
