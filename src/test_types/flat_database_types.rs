@@ -3,7 +3,7 @@ use crate::FlatDatabaseDescription;
 pub(crate) mod flat {
     use crate::{
         AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
-        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, ToKey, UsizeConstraints,
+        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, ToFromUsize, ToKey,
         VariantCount,
     };
 
@@ -63,6 +63,27 @@ pub(crate) mod flat {
         }
     }
 
+    impl ToFromUsize for MyFlatKeys {
+        fn to_usize(&self) -> usize {
+            match self {
+                Self::Param1 => 0,
+                Self::Param2 => 1,
+                Self::Param3 => 2,
+                Self::Param4 => 3,
+            }
+        }
+
+        fn try_from_usize(value: usize) -> Option<Self> {
+            match value {
+                0 => Some(Self::Param1),
+                1 => Some(Self::Param2),
+                2 => Some(Self::Param3),
+                3 => Some(Self::Param4),
+                _ => None,
+            }
+        }
+    }
+
     pub(crate) const FLAT_COUNT: usize = 4;
 
     impl VariantCount for MyFlatKeys {
@@ -82,8 +103,6 @@ pub(crate) mod flat {
 
     impl AbsFieldConstraints<MyFlatKeys> for MyFlatFields {}
     impl FlatFieldConstraints<MyFlatFields, MyFlatKeys> for MyFlatFields {}
-
-    impl UsizeConstraints<MyFlatKeys> for usize {}
 
     impl DataFieldAccessor<MyFlatKeys, MyFlatFields> for MyFlatData {
         fn get(&self, key: MyFlatKeys) -> MyFlatFields {

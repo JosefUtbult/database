@@ -4,7 +4,7 @@ pub(crate) mod layer {
     use crate::{
         AbsFieldConstraints, AbsFolderConstraints, AbsKeyConstraints, AccessorError, AllVariants,
         DataFieldAccessor, DataFieldTryAccessor, FlatFieldConstraints, FlatFolderConstraints,
-        FlatKeyConstraints, ToKey, UsizeConstraints, VariantCount,
+        FlatKeyConstraints, ToFromUsize, ToKey, VariantCount,
     };
 
     pub(crate) struct MyInnerInnerData {
@@ -207,15 +207,27 @@ pub(crate) mod layer {
         }
     }
 
-    impl From<MyDataFlatKeys> for usize {
-        fn from(value: MyDataFlatKeys) -> Self {
+    impl ToFromUsize for MyDataFlatKeys {
+        fn to_usize(&self) -> usize {
+            match self {
+                Self::Param1 => 0,
+                Self::Param2 => 1,
+                Self::Param3 => 2,
+                Self::Param4 => 3,
+                Self::Param5 => 4,
+                Self::Param6 => 5,
+            }
+        }
+
+        fn try_from_usize(value: usize) -> Option<Self> {
             match value {
-                MyDataFlatKeys::Param1 => 0,
-                MyDataFlatKeys::Param2 => 1,
-                MyDataFlatKeys::Param3 => 2,
-                MyDataFlatKeys::Param4 => 3,
-                MyDataFlatKeys::Param5 => 4,
-                MyDataFlatKeys::Param6 => 4,
+                0 => Some(Self::Param1),
+                1 => Some(Self::Param2),
+                2 => Some(Self::Param3),
+                3 => Some(Self::Param4),
+                4 => Some(Self::Param5),
+                5 => Some(Self::Param6),
+                _ => None,
             }
         }
     }
@@ -307,8 +319,6 @@ pub(crate) mod layer {
     impl AbsFolderConstraints for MyDataAbsFolders {}
 
     impl FlatKeyConstraints<MyDataAbsKeys> for MyDataFlatKeys {}
-
-    impl UsizeConstraints<MyDataFlatKeys> for usize {}
 
     impl FlatFieldConstraints<MyDataAbsFields, MyDataFlatKeys> for MyDataFlatFields {}
 

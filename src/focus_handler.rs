@@ -1,11 +1,18 @@
-use crate::{DatabaseDescription, UsizeConstraints};
+use crate::DatabaseDescription;
 
 pub trait FocusHandler<Database: DatabaseDescription>
-where
-    usize: UsizeConstraints<<Database as DatabaseDescription>::FlatKey>,
 {
     fn get_focus_key(&self, key: Database::FlatKey) -> Database::AbsKey;
     fn get_focus_field(&self, field: Database::FlatField) -> Database::AbsField;
+}
+
+pub trait FolderFocusDescription<Database: DatabaseDescription>
+{
+}
+
+pub trait FolderFocus<Database: DatabaseDescription>
+{
+
 }
 
 #[cfg(test)]

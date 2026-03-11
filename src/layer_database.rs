@@ -1,7 +1,7 @@
 use crate::{
     DatabaseDescription, FocusHandler,
     database_core::{DatabaseCore, DatabaseError},
-    database_traits::{ToKey, UsizeConstraints},
+    database_traits::ToKey,
 };
 
 use mutex_traits::{ConstInit, ScopedRawMutex};
@@ -13,9 +13,7 @@ pub struct LayerDatabase<
     Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
-> where
-    usize: UsizeConstraints<Database::FlatKey>,
-{
+> {
     database_core:
         DatabaseCore<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>,
 }
@@ -28,8 +26,6 @@ impl<
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > LayerDatabase<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
-where
-    usize: UsizeConstraints<Database::FlatKey>,
 {
     pub const fn new(data: Database::Data, focus_handler: Focus) -> Self {
         Self {

@@ -15,13 +15,21 @@ pub trait ToKey<Key> {
     fn to_key(&self) -> Key;
 }
 
+pub trait ToFromUsize
+where
+    Self: Sized,
+{
+    fn to_usize(&self) -> usize;
+    fn try_from_usize(value: usize) -> Option<Self>;
+}
+
 pub trait AbsKeyConstraints: Eq + Clone + Copy + Ord + AllVariants {}
 pub trait AbsFieldConstraints<AbsKey>: Eq + Clone + VariantCount + ToKey<AbsKey> {}
 
 pub trait AbsFolderConstraints: Eq + Clone + Copy + Ord + VariantCount {}
 
 pub trait FlatKeyConstraints<AbsKey>:
-    Eq + Clone + Copy + Ord + From<AbsKey> + VariantCount
+    Eq + Clone + Copy + Ord + From<AbsKey> + VariantCount + ToFromUsize
 {
 }
 pub trait FlatFieldConstraints<AbsField, FlatKey>:
@@ -34,12 +42,7 @@ pub trait FlatFolderConstraints<AbsFolder>:
 {
 }
 
-pub trait UsizeConstraints<FlatKey>: From<FlatKey> {}
-
-pub trait DatabaseDescription
-where
-    usize: UsizeConstraints<Self::FlatKey>,
-{
+pub trait DatabaseDescription {
     type AbsKey: AbsKeyConstraints;
     type AbsField: AbsFieldConstraints<Self::AbsKey>;
     type AbsFolder: AbsFolderConstraints;
@@ -67,10 +70,7 @@ impl VariantCount for DummyFolder {
 impl AbsFolderConstraints for DummyFolder {}
 impl FlatFolderConstraints<DummyFolder> for DummyFolder {}
 
-impl<Database: FlatDatabaseDescription> DatabaseDescription for Database
-where
-    usize: UsizeConstraints<Database::Key>,
-{
+impl<Database: FlatDatabaseDescription> DatabaseDescription for Database {
     type AbsKey = Database::Key;
     type AbsField = Database::Field;
     type AbsFolder = DummyFolder;

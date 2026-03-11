@@ -2,8 +2,8 @@ use heapless::Vec;
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
 use crate::{
-    AllVariants, DataFieldAccessor, DatabaseDescription, FocusHandler, SubscriberData, ToKey,
-    VariantCount, database_traits::UsizeConstraints, mutex::ScopedLocked,
+    AllVariants, DataFieldAccessor, DatabaseDescription, FocusHandler, SubscriberData, ToFromUsize,
+    ToKey, VariantCount, mutex::ScopedLocked,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -17,15 +17,14 @@ struct KeySet<Key, const KEY_COUNT: usize>([Option<Key>; KEY_COUNT]);
 
 impl<Key, const KEY_COUNT: usize> KeySet<Key, KEY_COUNT>
 where
-    Key: Eq + Copy,
-    usize: From<Key>,
+    Key: Eq + Copy + ToFromUsize,
 {
     const fn new() -> Self {
         Self([const { None }; KEY_COUNT])
     }
 
     fn insert(&mut self, key: Key) -> Result<(), DatabaseError> {
-        let index: usize = key.clone().into();
+        let index: usize = key.clone().to_usize();
         if index < KEY_COUNT {
             if self.0[index].is_none() {
                 let _ = self.0[index].insert(key);
@@ -53,9 +52,7 @@ pub(crate) struct InternalMutable<
     Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
-> where
-    usize: UsizeConstraints<Database::FlatKey>,
-{
+> {
     pub(crate) data: Database::Data,
 }
 
@@ -64,8 +61,6 @@ impl<
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
-where
-    usize: UsizeConstraints<Database::FlatKey>,
 {
     pub(crate) const fn new(data: Database::Data) -> Self {
         Self { data }
@@ -104,9 +99,7 @@ pub(crate) struct DatabaseCore<
     Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
-> where
-    usize: UsizeConstraints<Database::FlatKey>,
-{
+> {
     pub(crate) data:
         ScopedLocked<Mutex, InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>>,
     pub(crate) subscribers: SubscriberData<'a, Mutex, Database, FLAT_PARAMETER_COUNT>,
@@ -121,8 +114,6 @@ impl<
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > DatabaseCore<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
-where
-    usize: UsizeConstraints<Database::FlatKey>,
 {
     const _STATIC_ASSERTIONS: () = {
         assert!(ABS_PARAMETER_COUNT == <Database::AbsKey as VariantCount>::COUNT);

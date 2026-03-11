@@ -1,16 +1,13 @@
 use crate::{
     DatabaseDescription, FlatDatabaseDescription, FocusHandler,
     database_core::{DatabaseCore, DatabaseError},
-    database_traits::{ToKey, UsizeConstraints},
+    database_traits::ToKey,
 };
 
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
 struct FlatFocusHandler {}
-impl<Database: FlatDatabaseDescription> FocusHandler<Database> for FlatFocusHandler
-where
-    usize: UsizeConstraints<Database::Key>,
-{
+impl<Database: FlatDatabaseDescription> FocusHandler<Database> for FlatFocusHandler {
     fn get_focus_key(
         &self,
         key: <Database as DatabaseDescription>::FlatKey,
@@ -31,9 +28,7 @@ pub struct FlatDatabase<
     Mutex: ScopedRawMutex + ConstInit,
     Database: FlatDatabaseDescription,
     const PARAMETER_COUNT: usize,
->(DatabaseCore<'a, FlatFocusHandler, Mutex, Database, PARAMETER_COUNT, PARAMETER_COUNT>)
-where
-    usize: UsizeConstraints<Database::Key>;
+>(DatabaseCore<'a, FlatFocusHandler, Mutex, Database, PARAMETER_COUNT, PARAMETER_COUNT>);
 
 impl<
     'a,
@@ -41,8 +36,6 @@ impl<
     Database: FlatDatabaseDescription,
     const PARAMETER_COUNT: usize,
 > FlatDatabase<'a, Mutex, Database, PARAMETER_COUNT>
-where
-    usize: UsizeConstraints<Database::Key>,
 {
     pub const fn new(data: Database::Data) -> Self {
         Self(DatabaseCore::new(data, FlatFocusHandler {}))

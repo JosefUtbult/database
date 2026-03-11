@@ -7,7 +7,7 @@ use core::{
 use heapless::{LinearMap, Vec};
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
-use crate::{DatabaseDescription, UsizeConstraints, mutex::ScopedLocked};
+use crate::{DatabaseDescription, mutex::ScopedLocked};
 
 pub trait Subscriber<Keys> {
     fn on_change(&self, parameter_changes: &[Keys]);
@@ -53,10 +53,7 @@ where
     }
 }
 
-struct InternalMutable<Database: DatabaseDescription, const FLAT_PARAMETER_COUNT: usize>
-where
-    usize: UsizeConstraints<Database::FlatKey>,
-{
+struct InternalMutable<Database: DatabaseDescription, const FLAT_PARAMETER_COUNT: usize> {
     has_changed: Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>,
     key_to_subscriber_map:
         VectorMap<Database::FlatKey, SubscriberIndex, FLAT_PARAMETER_COUNT, SUBSCRIBER_MAX_COUNT>,
@@ -69,9 +66,7 @@ pub(crate) struct SubscriberData<
     Mutex: ScopedRawMutex + ConstInit,
     Database: DatabaseDescription,
     const FLAT_PARAMETER_COUNT: usize,
-> where
-    usize: UsizeConstraints<Database::FlatKey>,
-{
+> {
     data: ScopedLocked<Mutex, InternalMutable<Database, FLAT_PARAMETER_COUNT>>,
     subscribers: UnsafeCell<Vec<&'a dyn Subscriber<Database::FlatKey>, SUBSCRIBER_MAX_COUNT>>,
     allow_subscribers: AtomicBool,
@@ -80,8 +75,6 @@ pub(crate) struct SubscriberData<
 
 impl<Database: DatabaseDescription, const FLAT_PARAMETER_COUNT: usize>
     InternalMutable<Database, FLAT_PARAMETER_COUNT>
-where
-    usize: UsizeConstraints<Database::FlatKey>,
 {
     const fn new() -> Self {
         Self {
@@ -98,8 +91,6 @@ impl<
     Database: DatabaseDescription,
     const FLAT_PARAMETER_COUNT: usize,
 > SubscriberData<'a, Mutex, Database, FLAT_PARAMETER_COUNT>
-where
-    usize: UsizeConstraints<Database::FlatKey>,
 {
     #[allow(dead_code)]
     pub(crate) const fn new() -> Self {
