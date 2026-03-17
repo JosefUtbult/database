@@ -1,5 +1,6 @@
 use crate::{
-    DatabaseDescription, FocusHandler,
+    AbsPair, DatabaseDescription, FocusConstraints, FocusHandler, FolderFocus, Pair,
+    PathConstraints,
     database_core::{DatabaseCore, DatabaseError},
     database_traits::ToKey,
 };
@@ -41,7 +42,7 @@ impl<
         &self,
         key: Database::AbsKey,
     ) -> Result<Database::FlatField, DatabaseError> {
-        self.database_core.get(key)
+        self.database_core.get_absolute(key)
     }
 
     pub fn get(&self, key: Database::FlatKey) -> Result<Database::FlatField, DatabaseError> {
@@ -50,9 +51,7 @@ impl<
     }
 
     pub fn set_absolute(&self, field: Database::AbsField) -> Result<(), DatabaseError> {
-        let flat_field: Database::FlatField = field.clone().into();
-        let flat_key: Database::FlatKey = flat_field.to_key();
-        self.database_core.set(flat_key, field)
+        self.database_core.set_absolute(field)
     }
 
     pub fn set(&self, field: Database::FlatField) -> Result<(), DatabaseError> {

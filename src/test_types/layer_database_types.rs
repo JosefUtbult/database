@@ -1,8 +1,19 @@
+pub(crate) const TEST_LAYER_DATABASE_ABS_COUNT: usize = layer::MY_DATA_ABS_VARIANT_COUNT;
+pub(crate) const TEST_LAYER_DATABASE_FLAT_COUNT: usize = layer::MY_DATA_FLAT_VARIANT_COUNT;
+
+pub(crate) type TestLayerDatabaseDescription = (
+    (layer::MyDataAbsKeys, layer::MyDataAbsFields),
+    (layer::MyDataFlatKeys, layer::MyDataFlatFields),
+    layer::MyLayerData,
+);
+
 pub(crate) mod layer {
     use crate::{
         AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
-        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, FocusConstraints,
-        PathConstraints, ToFromUsize, ToFull, ToKey, VariantCount,
+        DataFieldTryAccessor, DynamicKeySet, FlatFieldConstraints, FlatKeyConstraints,
+        FocusConstraints, FolderHandler, PathConstraints, PathDescription, ToFromUsize, ToFull,
+        ToKey, VariantCount, database_core::DatabaseError,
+        test_types::TestLayerDatabaseDescription,
     };
 
     pub(crate) struct MyInnerInnerData {
@@ -588,13 +599,102 @@ pub(crate) mod layer {
             }
         }
     }
+
+    impl FolderHandler<(), TestLayerDatabaseDescription> for MyLayerData {
+        type Content = Self;
+
+        fn get_at<'a>(&'a self, _path: ()) -> &'a Self::Content {
+            self
+        }
+
+        fn get_at_mut<'a>(&'a mut self, _path: ()) -> &'a mut Self::Content {
+            self
+        }
+
+        fn compare(
+            &self,
+            differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
+            _path: (),
+            other: &Self::Content,
+        ) -> Result<(), DatabaseError> {
+            if self.param1 != other.param1 {
+                differing_keys.insert_flat_key(MyDataFlatKeys::Param1)?;
+            }
+
+            if self.param2 != other.param2 {
+                differing_keys.insert_flat_key(MyDataFlatKeys::Param2)?;
+            }
+
+            if self.param3 != other.param3 {
+                differing_keys.insert_flat_key(MyDataFlatKeys::Param3)?;
+            }
+
+            Ok(())
+        }
+
+        fn clone(
+            &mut self,
+            differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
+            _path: (),
+            other: &Self::Content,
+        ) -> Result<(), crate::database_core::DatabaseError> {
+            if self.param1 != other.param1 {
+                self.param1 = other.param1;
+                differing_keys.insert_flat_key(MyDataFlatKeys::Param1)?;
+            }
+
+            if self.param2 != other.param2 {
+                self.param2 = other.param2;
+                differing_keys.insert_flat_key(MyDataFlatKeys::Param2)?;
+            }
+
+            if self.param3 != other.param3 {
+                self.param3 = other.param3;
+                differing_keys.insert_flat_key(MyDataFlatKeys::Param3)?;
+            }
+
+            Ok(())
+        }
+    }
+
+    impl FolderHandler<MyLayerData_MyInnerData_FolderPath, TestLayerDatabaseDescription>
+        for MyLayerData
+    {
+        type Content = MyInnerData;
+
+        fn get_at<'a>(&'a self, path: MyLayerData_MyInnerData_FolderPath) -> &'a Self::Content {
+            match path {
+                MyLayerData_MyInnerData_FolderPath::Inner1 => &self.inner1,
+                MyLayerData_MyInnerData_FolderPath::Inner2 => &self.inner2,
+            }
+        }
+
+        fn get_at_mut<'a>(
+            &'a mut self,
+            path: MyLayerData_MyInnerData_FolderPath,
+        ) -> &'a mut Self::Content {
+            match path {
+                MyLayerData_MyInnerData_FolderPath::Inner1 => &mut self.inner1,
+                MyLayerData_MyInnerData_FolderPath::Inner2 => &mut self.inner2,
+            }
+        }
+
+        fn compare(
+            &self,
+            _differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
+            _path: MyLayerData_MyInnerData_FolderPath,
+            _other: &Self::Content,
+        ) -> Result<(), DatabaseError> {
+            todo!()
+        }
+
+        fn clone(
+            &mut self,
+            _differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
+            _path: MyLayerData_MyInnerData_FolderPath,
+            _other: &Self::Content,
+        ) -> Result<(), crate::database_core::DatabaseError> {
+            todo!()
+        }
+    }
 }
-
-pub(crate) const TEST_LAYER_DATABASE_ABS_COUNT: usize = layer::MY_DATA_ABS_VARIANT_COUNT;
-pub(crate) const TEST_LAYER_DATABASE_FLAT_COUNT: usize = layer::MY_DATA_FLAT_VARIANT_COUNT;
-
-pub(crate) type TestLayerDatabaseDescription = (
-    (layer::MyDataAbsKeys, layer::MyDataAbsFields),
-    (layer::MyDataFlatKeys, layer::MyDataFlatFields),
-    layer::MyLayerData,
-);

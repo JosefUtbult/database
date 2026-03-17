@@ -42,11 +42,11 @@ impl<
     }
 
     pub fn get(&self, key: Database::Key) -> Result<Database::Field, DatabaseError> {
-        self.0.get(key)
+        self.0.get_absolute(key)
     }
 
     pub fn set(&self, field: Database::Field) -> Result<(), DatabaseError> {
-        self.0.set(field.to_key(), field)
+        self.0.set_absolute(field)
     }
 
     pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {

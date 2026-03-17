@@ -1,8 +1,15 @@
+pub(crate) const TEST_FLAT_DATABASE_COUNT: usize = flat::FLAT_COUNT;
+
+pub(crate) fn create_test_flat_data() -> flat::MyFlatData {
+    flat::MyFlatData::new()
+}
+
+pub(crate) type TestFlatDatabaseDescription =
+    ((flat::MyFlatKeys, flat::MyFlatFields), flat::MyFlatData);
+
 pub(crate) mod flat {
     use crate::{
-        AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
-        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, ToFromUsize, ToKey,
-        VariantCount,
+        database_core::DatabaseError, test_types::TestFlatDatabaseDescription, AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor, DataFieldTryAccessor, DynamicKeySet, FlatFieldConstraints, FlatKeyConstraints, FolderHandler, ToFromUsize, ToKey, VariantCount
     };
 
     pub(crate) struct MyFlatData {
@@ -169,13 +176,40 @@ pub(crate) mod flat {
             }
         }
     }
+
+    impl FolderHandler<(), TestFlatDatabaseDescription> for MyFlatData {
+        type Content = MyFlatData;
+
+        fn get_at<'a>(
+            &'a self,
+            _path: ()
+        ) -> &'a Self::Content {
+            self
+        }
+
+        fn get_at_mut<'a>(
+            &'a mut self,
+            _path: ()
+        ) -> &'a mut Self::Content {
+            self
+        }
+
+        fn compare(
+            &self,
+            _differing_keys: &mut dyn DynamicKeySet<MyFlatKeys, MyFlatKeys>,
+            _path: (),
+            _other: &Self
+        ) -> Result<(), DatabaseError> {
+            todo!()
+        }
+
+        fn clone(
+            &mut self,
+            _differing_keys: &mut dyn DynamicKeySet<MyFlatKeys, MyFlatKeys>,
+            _path: (),
+            _other: &Self
+        ) -> Result<(), DatabaseError> {
+            todo!()
+        }
+    }
 }
-
-pub(crate) const TEST_FLAT_DATABASE_COUNT: usize = flat::FLAT_COUNT;
-
-pub(crate) fn create_test_flat_data() -> flat::MyFlatData {
-    flat::MyFlatData::new()
-}
-
-pub(crate) type TestFlatDatabaseDescription =
-    ((flat::MyFlatKeys, flat::MyFlatFields), flat::MyFlatData);

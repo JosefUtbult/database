@@ -19,6 +19,12 @@ pub use focus_handler::*;
 mod data_field_accessor;
 pub use data_field_accessor::*;
 
+mod folder_handler;
+pub use folder_handler::*;
+
+mod key_set;
+pub use key_set::*;
+
 mod subscriber;
 pub use subscriber::*;
 
