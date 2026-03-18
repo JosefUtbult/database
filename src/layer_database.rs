@@ -1,5 +1,7 @@
 use crate::{
-    database_core::{DatabaseCore, DatabaseError}, DatabaseDescription, FocusConstraints, FocusHandler, FolderFocus, FolderHandler, Pair, PathConstraints, Subscriber, SubscriberError
+    DatabaseDescription, FocusConstraints, FocusHandler, FolderFocus, FolderHandler, Pair,
+    PathConstraints, Subscriber, SubscriberError,
+    database_core::{DatabaseCore, DatabaseError},
 };
 
 use mutex_traits::{ConstInit, ScopedRawMutex};
@@ -9,18 +11,16 @@ pub struct LayerDatabase<
     Focus: FocusHandler<Database>,
     Mutex: ScopedRawMutex + ConstInit,
     Database: DatabaseDescription,
-    const ABS_PARAMETER_COUNT: usize,
-    const FLAT_PARAMETER_COUNT: usize,
->(DatabaseCore<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>);
+    const PARAMETER_COUNT: usize,
+>(DatabaseCore<'a, Focus, Mutex, Database, PARAMETER_COUNT>);
 
 impl<
     'a,
     Focus: FocusHandler<Database>,
     Mutex: ScopedRawMutex + ConstInit,
     Database: DatabaseDescription,
-    const ABS_PARAMETER_COUNT: usize,
-    const FLAT_PARAMETER_COUNT: usize,
-> LayerDatabase<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
+    const PARAMETER_COUNT: usize,
+> LayerDatabase<'a, Focus, Mutex, Database, PARAMETER_COUNT>
 {
     pub const fn new(data: Database::Data, focus_handler: Focus) -> Self {
         Self(DatabaseCore::new(data, focus_handler))
@@ -111,10 +111,7 @@ pub(crate) mod test {
         layer::{AbsFields, AbsKeys, Fields, Keys, MyInnerDataFocus, MyLayerData, my_inner_data},
         mutex::test_mutex::Mutex,
         test_data_focus_handler::MyFocusHandler,
-        test_types::{
-            TEST_LAYER_DATABASE_ABS_COUNT, TEST_LAYER_DATABASE_FLAT_COUNT,
-            TestLayerDatabaseDescription,
-        },
+        test_types::{TEST_LAYER_DATABASE_PARAMETER_COUNT, TestLayerDatabaseDescription},
     };
 
     type MyDatabase<'a> = LayerDatabase<
@@ -122,8 +119,7 @@ pub(crate) mod test {
         MyFocusHandler,
         Mutex,
         TestLayerDatabaseDescription,
-        TEST_LAYER_DATABASE_ABS_COUNT,
-        TEST_LAYER_DATABASE_FLAT_COUNT,
+        TEST_LAYER_DATABASE_PARAMETER_COUNT,
     >;
 
     fn build_database<'a>() -> MyDatabase<'a> {

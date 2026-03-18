@@ -9,7 +9,7 @@ pub(crate) type TestFlatDatabaseDescription =
 
 pub(crate) mod flat {
     use crate::{
-        AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
+        AbsFieldConstraints, AbsKeyConstraints, AccessorError, DataFieldAccessor,
         DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, Folder, ToFromUsize, ToKey,
         VariantCount, test_types::TestFlatDatabaseDescription,
     };
@@ -92,13 +92,10 @@ pub(crate) mod flat {
     }
 
     pub(crate) const FLAT_COUNT: usize = 4;
+    pub(crate) const ALL_FLAT_KEYS: [MyFlatKeys; FLAT_COUNT] = [MyFlatKeys::Param1, MyFlatKeys::Param2, MyFlatKeys::Param3, MyFlatKeys::Param4];
 
     impl VariantCount for MyFlatKeys {
         const COUNT: usize = FLAT_COUNT;
-    }
-
-    impl AllVariants for MyFlatKeys {
-        const ALL_VARIANTS: &[Self] = &[Self::Param1, Self::Param2, Self::Param3, Self::Param4];
     }
 
     impl VariantCount for MyFlatFields {

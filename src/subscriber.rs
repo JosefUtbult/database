@@ -27,12 +27,12 @@ struct VectorMap<FlatKey, FlatField, const KEY_COUNT: usize, const PARAM_COUNT: 
     LinearMap<FlatKey, Vec<FlatField, PARAM_COUNT>, KEY_COUNT>,
 )
 where
-    FlatKey: Eq + Clone + Copy;
+    FlatKey: Eq + Clone;
 
 impl<FlatKey, FlatField, const KEY_COUNT: usize, const PARAM_COUNT: usize>
     VectorMap<FlatKey, FlatField, KEY_COUNT, PARAM_COUNT>
 where
-    FlatKey: Eq + Clone + Copy,
+    FlatKey: Eq + Clone,
 {
     const fn new() -> Self {
         Self(LinearMap::new())
@@ -44,7 +44,7 @@ where
 
     pub fn get_or_create(&mut self, key: &FlatKey) -> &mut Vec<FlatField, PARAM_COUNT> {
         if !self.0.contains_key(key) {
-            if self.0.insert(*key, Vec::new()).is_err() {
+            if self.0.insert(key.clone(), Vec::new()).is_err() {
                 panic!("Unable to insert into linear map");
             }
         }
@@ -238,7 +238,7 @@ impl<
             let mut changed_parameters: Vec<Database::FlatKey, FLAT_PARAMETER_COUNT> = Vec::new();
             for key in subscriber_to_key_vector.iter() {
                 if data.has_changed.contains(key) {
-                    unsafe { changed_parameters.push_unchecked(*key) };
+                    unsafe { changed_parameters.push_unchecked(key.clone()) };
                 }
             }
 
@@ -274,9 +274,7 @@ mod test {
     use heapless::Vec;
 
     use crate::{
-        AllVariants, SUBSCRIBER_MAX_COUNT, Subscriber, SubscriberData, SubscriberError,
-        mutex::test_mutex::Mutex,
-        test_types::{TEST_FLAT_DATABASE_COUNT, TestFlatDatabaseDescription, flat::MyFlatKeys},
+        mutex::test_mutex::Mutex, test_types::{flat::{MyFlatKeys, ALL_FLAT_KEYS}, TestFlatDatabaseDescription, TEST_FLAT_DATABASE_COUNT}, Subscriber, SubscriberData, SubscriberError, SUBSCRIBER_MAX_COUNT
     };
 
     struct MySubscriber {
@@ -422,7 +420,7 @@ mod test {
             std::println!("Index {}", counter);
             counter += 1;
 
-            for key in MyFlatKeys::ALL_VARIANTS.iter() {
+            for key in ALL_FLAT_KEYS.iter() {
                 subscriber_data.subscribe(subscriber, *key).unwrap();
             }
         }

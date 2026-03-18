@@ -14,11 +14,7 @@ pub enum DatabaseError {
     ParameterCountMissmatch,
 }
 
-pub(crate) struct InternalMutable<
-    Database: DatabaseDescription,
-    const ABS_PARAMETER_COUNT: usize,
-    const FLAT_PARAMETER_COUNT: usize,
-> {
+pub(crate) struct InternalMutable<Database: DatabaseDescription, const PARAMETER_COUNT: usize> {
     pub(crate) data: Database::Data,
 }
 
@@ -28,11 +24,8 @@ enum SetState {
     UpToDate,
 }
 
-impl<
-    Database: DatabaseDescription,
-    const ABS_PARAMETER_COUNT: usize,
-    const FLAT_PARAMETER_COUNT: usize,
-> InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
+impl<Database: DatabaseDescription, const PARAMETER_COUNT: usize>
+    InternalMutable<Database, PARAMETER_COUNT>
 {
     const fn new(data: Database::Data) -> Self {
         Self { data }
@@ -41,8 +34,8 @@ impl<
     fn clone(
         &mut self,
         other: &Database::Data,
-    ) -> Result<Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>, DatabaseError> {
-        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, FLAT_PARAMETER_COUNT> =
+    ) -> Result<Vec<Database::FlatKey, PARAMETER_COUNT>, DatabaseError> {
+        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, PARAMETER_COUNT> =
             KeySet::new();
 
         self.data.clone(&mut differing_keys, other)?;
@@ -72,7 +65,7 @@ impl<
         let flat_field: Database::FlatField = abs_field.clone().into();
         let flat_key: Database::FlatKey = flat_field.to_key();
 
-        if self.data.get(abs_key) != abs_field {
+        if self.data.get(abs_key.clone()) != abs_field {
             self.data.set(abs_field);
 
             // If a parameter was set in a non-focused folder, the notifying should be delayed
@@ -109,14 +102,14 @@ impl<
         &self,
         lhs: Path,
         rhs: Path,
-    ) -> Result<Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>, DatabaseError>
+    ) -> Result<Vec<Database::FlatKey, PARAMETER_COUNT>, DatabaseError>
     where
         FocusType: FocusConstraints,
         Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
         InternalAbsPair: Pair,
         Database::Data: FolderHandler<Path, Database>,
     {
-        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, FLAT_PARAMETER_COUNT> =
+        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, PARAMETER_COUNT> =
             KeySet::new();
 
         let other: &<Database::Data as FolderHandler<Path, Database>>::Content =
@@ -132,13 +125,13 @@ impl<
         &mut self,
         path: Path,
         other: &<Database::Data as FolderHandler<Path, Database>>::Content,
-    ) -> Result<Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>, DatabaseError>
+    ) -> Result<Vec<Database::FlatKey, PARAMETER_COUNT>, DatabaseError>
     where
         Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
         InternalAbsPair: Pair,
         Database::Data: FolderHandler<Path, Database>,
     {
-        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, FLAT_PARAMETER_COUNT> =
+        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, PARAMETER_COUNT> =
             KeySet::new();
 
         match self.data.clone_path(&mut differing_keys, path, other) {
@@ -153,12 +146,10 @@ pub(crate) struct DatabaseCore<
     Focus: FocusHandler<Database>,
     Mutex: ScopedRawMutex + ConstInit,
     Database: DatabaseDescription,
-    const ABS_PARAMETER_COUNT: usize,
-    const FLAT_PARAMETER_COUNT: usize,
+    const PARAMETER_COUNT: usize,
 > {
-    pub data:
-        ScopedLocked<Mutex, InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>>,
-    pub subscribers: SubscriberData<'a, Mutex, Database, FLAT_PARAMETER_COUNT>,
+    pub data: ScopedLocked<Mutex, InternalMutable<Database, PARAMETER_COUNT>>,
+    pub subscribers: SubscriberData<'a, Mutex, Database, PARAMETER_COUNT>,
     pub focus_handler: Focus,
 }
 
@@ -167,15 +158,12 @@ impl<
     Focus: FocusHandler<Database>,
     Mutex: ScopedRawMutex + ConstInit,
     Database: DatabaseDescription,
-    const ABS_PARAMETER_COUNT: usize,
-    const FLAT_PARAMETER_COUNT: usize,
-> DatabaseCore<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
+    const PARAMETER_COUNT: usize,
+> DatabaseCore<'a, Focus, Mutex, Database, PARAMETER_COUNT>
 {
     const _STATIC_ASSERTIONS: () = {
-        assert!(ABS_PARAMETER_COUNT == <Database::AbsKey as VariantCount>::COUNT);
-        assert!(ABS_PARAMETER_COUNT == <Database::AbsField as VariantCount>::COUNT);
-        assert!(FLAT_PARAMETER_COUNT == <Database::FlatKey as VariantCount>::COUNT);
-        assert!(FLAT_PARAMETER_COUNT == <Database::FlatField as VariantCount>::COUNT);
+        assert!(PARAMETER_COUNT == <Database::FlatKey as VariantCount>::COUNT);
+        assert!(PARAMETER_COUNT == <Database::FlatField as VariantCount>::COUNT);
     };
 
     pub(crate) const fn new(data: Database::Data, focus_handler: Focus) -> Self {

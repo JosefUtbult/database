@@ -27,7 +27,7 @@ pub struct FlatDatabase<
     Mutex: ScopedRawMutex + ConstInit,
     Database: FlatDatabaseDescription,
     const PARAMETER_COUNT: usize,
->(DatabaseCore<'a, FlatFocusHandler, Mutex, Database, PARAMETER_COUNT, PARAMETER_COUNT>);
+>(DatabaseCore<'a, FlatFocusHandler, Mutex, Database, PARAMETER_COUNT>);
 
 impl<
     'a,

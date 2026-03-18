@@ -1,7 +1,4 @@
-pub(crate) const TEST_LAYER_DATABASE_ABS_COUNT: usize =
-    layer::my_layer_data::MY_DATA_ABS_VARIANT_COUNT;
-
-pub(crate) const TEST_LAYER_DATABASE_FLAT_COUNT: usize =
+pub(crate) const TEST_LAYER_DATABASE_PARAMETER_COUNT: usize =
     layer::my_layer_data::MY_DATA_FLAT_VARIANT_COUNT;
 
 pub(crate) type TestLayerDatabaseDescription = (
@@ -473,41 +470,6 @@ pub(crate) mod layer {
                     _ => Err(()),
                 }
             }
-        }
-
-        pub(crate) const MY_DATA_ABS_VARIANT_COUNT: usize = 11;
-        pub(crate) const MY_DATA_ABS_KEYS_ALL_VARIANTS: [AbsKeys; MY_DATA_ABS_VARIANT_COUNT] = [
-            AbsKeys::Param1,
-            AbsKeys::Param2,
-            AbsKeys::Param3,
-            AbsKeys::Inner1(my_inner_data::Keys::Param4),
-            AbsKeys::Inner1(my_inner_data::Keys::Param5),
-            AbsKeys::Inner1(my_inner_data::Keys::Inner3(
-                my_inner_inner_data::Keys::Param6,
-            )),
-            AbsKeys::Inner1(my_inner_data::Keys::Inner4(
-                my_inner_inner_data::Keys::Param6,
-            )),
-            AbsKeys::Inner2(my_inner_data::Keys::Param4),
-            AbsKeys::Inner2(my_inner_data::Keys::Param5),
-            AbsKeys::Inner2(my_inner_data::Keys::Inner3(
-                my_inner_inner_data::Keys::Param6,
-            )),
-            AbsKeys::Inner2(my_inner_data::Keys::Inner4(
-                my_inner_inner_data::Keys::Param6,
-            )),
-        ];
-
-        impl crate::VariantCount for AbsKeys {
-            const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
-        }
-
-        impl crate::AllVariants for AbsKeys {
-            const ALL_VARIANTS: &[Self] = &MY_DATA_ABS_KEYS_ALL_VARIANTS;
-        }
-
-        impl crate::VariantCount for AbsFields {
-            const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
         }
 
         pub(crate) const MY_DATA_FLAT_VARIANT_COUNT: usize = 6;
