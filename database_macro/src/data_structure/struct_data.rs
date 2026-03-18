@@ -4,7 +4,7 @@ use std::vec::Vec;
 use std::{collections::HashMap, fmt::Debug};
 use syn::ItemStruct;
 
-use crate::casing::to_upper_snake_case;
+use crate::casing::{to_snake_case, to_upper_snake_case};
 use crate::data_structure::all_fields::{FolderToFieldMap, TypeToFieldMap};
 use crate::data_structure::field_to_child_struct_map::FieldToFolderMap;
 
@@ -26,22 +26,15 @@ impl Debug for FieldData {
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct TypeNames {
+    pub(crate) namespace: Ident,
     pub(crate) abs_key_enum: Ident,
     pub(crate) abs_field_enum: Ident,
-    pub(crate) abs_folder_enum: Ident,
     pub(crate) flat_key_enum: Ident,
     pub(crate) flat_field_enum: Ident,
-    pub(crate) flat_folder_enum: Ident,
     pub(crate) abs_path_count_name: Ident,
     pub(crate) flat_path_count_name: Ident,
     pub(crate) abs_folder_count_name: Ident,
     pub(crate) flat_folder_count_name: Ident,
-    #[allow(dead_code)]
-    pub(crate) folder_key_name: Ident,
-    #[allow(dead_code)]
-    pub(crate) folder_field_name: Ident,
-    #[allow(dead_code)]
-    pub(crate) folder_mut_field_name: Ident,
 }
 
 #[derive(Clone)]
@@ -102,19 +95,16 @@ pub(super) fn populate_struct_map(
         .into_iter()
         .map(|item_struct| {
             let name = item_struct.ident.to_string();
+            let snake_case_name = to_snake_case(&name);
             let uppercase_name = to_upper_snake_case(&name);
             let has_debug_derive = has_debug_derive(&item_struct);
             StructData {
                 type_names: TypeNames {
-                    abs_key_enum: format_ident!("{}AbsKey", name.clone()),
-                    abs_field_enum: format_ident!("{}AbsField", name.clone()),
-                    abs_folder_enum: format_ident!("{}AbsFolder", name.clone()),
-                    flat_key_enum: format_ident!("{}Key", name.clone()),
-                    flat_field_enum: format_ident!("{}Field", name.clone()),
-                    flat_folder_enum: format_ident!("{}Folder", name.clone()),
-                    folder_key_name: format_ident!("{}FolderKey", name.clone()),
-                    folder_field_name: format_ident!("{}FolderKey", name.clone()),
-                    folder_mut_field_name: format_ident!("{}FolderFieldMut", name.clone()),
+                    namespace: format_ident!("{}", snake_case_name.clone()),
+                    abs_key_enum: format_ident!("Key"),
+                    abs_field_enum: format_ident!("Field"),
+                    flat_key_enum: format_ident!("FlatKey"),
+                    flat_field_enum: format_ident!("FlatField"),
                     abs_path_count_name: format_ident!("{}_ABS_COUNT", uppercase_name),
                     flat_path_count_name: format_ident!("{}_FLAT_COUNT", uppercase_name),
                     abs_folder_count_name: format_ident!("{}_FOLDER_ABS_COUNT", uppercase_name),

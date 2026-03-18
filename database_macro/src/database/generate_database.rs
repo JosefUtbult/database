@@ -17,13 +17,10 @@ pub(crate) fn generate_database(
 
     let abs_key_enum = root_struct.type_names.abs_key_enum.clone();
     let abs_field_enum = root_struct.type_names.abs_field_enum.clone();
-    let abs_folder_enum = root_struct.type_names.abs_folder_enum.clone();
 
     let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
     let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
-    let flat_folder_enum = root_struct.type_names.flat_folder_enum.clone();
 
-    let abs_count_name = root_struct.type_names.abs_path_count_name.clone();
     let flat_count_name = root_struct.type_names.flat_path_count_name.clone();
 
     quote! {
@@ -31,10 +28,8 @@ pub(crate) fn generate_database(
         impl #crate_path::DatabaseDescription for #root_struct_description {
             type AbsKey = #abs_key_enum;
             type AbsField = #abs_field_enum;
-            type AbsFolder = #abs_folder_enum;
             type FlatKey = #flat_key_enum;
             type FlatField = #flat_field_enum;
-            type FlatFolder = #flat_folder_enum;
             type Data = #root_struct_name;
         }
 
@@ -43,7 +38,6 @@ pub(crate) fn generate_database(
             Mutex,
             #focus_handler_name,
             #root_struct_description,
-            #abs_count_name,
             #flat_count_name
         >;
     }

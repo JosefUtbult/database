@@ -312,6 +312,4 @@ pub(super) fn build_conditional_paths(data_structure: &mut DataStructure) {
         &mut data_structure.folder_focus_path_map,
         &mut data_structure.all_folder_fields,
     );
-
-    eprintln!("Multi path map: {:?}", data_structure.folder_focus_path_map);
 }
