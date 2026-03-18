@@ -1,5 +1,5 @@
 use crate::{
-    DatabaseDescription, FlatDatabaseDescription, FocusHandler,
+    DatabaseDescription, FlatDatabaseDescription, FocusHandler, Subscriber, SubscriberError,
     database_core::{DatabaseCore, DatabaseError},
 };
 
@@ -38,6 +38,18 @@ impl<
 {
     pub const fn new(data: Database::Data) -> Self {
         Self(DatabaseCore::new(data, FlatFocusHandler {}))
+    }
+
+    pub fn subscribe(
+        &self,
+        subscriber: &'a dyn Subscriber<Database::Key>,
+        key: Database::Key,
+    ) -> Result<(), SubscriberError> {
+        self.0.subscribe(subscriber, key)
+    }
+
+    pub fn notify_subscribers(&self) {
+        self.0.notify_subscribers();
     }
 
     pub fn get(&self, key: Database::Key) -> Result<Database::Field, DatabaseError> {

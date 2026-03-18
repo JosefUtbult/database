@@ -3,8 +3,8 @@ use mutex_traits::{ConstInit, ScopedRawMutex};
 
 use crate::{
     DataFieldAccessor, DatabaseDescription, FocusConstraints, FocusHandler, Folder, FolderFocus,
-    FolderHandler, KeySet, Pair, PathConstraints, SubscriberData, ToKey, VariantCount,
-    mutex::ScopedLocked,
+    FolderHandler, KeySet, Pair, PathConstraints, Subscriber, SubscriberData, SubscriberError,
+    ToKey, VariantCount, mutex::ScopedLocked,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -184,6 +184,18 @@ impl<
             data: ScopedLocked::new(InternalMutable::new(data)),
             subscribers: SubscriberData::new(),
         }
+    }
+
+    pub(crate) fn subscribe(
+        &self,
+        subscriber: &'a dyn Subscriber<Database::FlatKey>,
+        key: Database::FlatKey,
+    ) -> Result<(), SubscriberError> {
+        self.subscribers.subscribe(subscriber, key)
+    }
+
+    pub(crate) fn notify_subscribers(&self) {
+        self.subscribers.notify_subscribers();
     }
 
     pub(crate) fn get_absolute(

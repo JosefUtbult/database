@@ -167,7 +167,6 @@ impl<
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn subscribe(
         &self,
         subscriber: &'a dyn Subscriber<Database::FlatKey>,

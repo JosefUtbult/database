@@ -1,7 +1,5 @@
 use crate::{
-    DatabaseDescription, FocusConstraints, FocusHandler, FolderFocus, FolderHandler, Pair,
-    PathConstraints,
-    database_core::{DatabaseCore, DatabaseError},
+    database_core::{DatabaseCore, DatabaseError}, DatabaseDescription, FocusConstraints, FocusHandler, FolderFocus, FolderHandler, Pair, PathConstraints, Subscriber, SubscriberError
 };
 
 use mutex_traits::{ConstInit, ScopedRawMutex};
@@ -13,10 +11,7 @@ pub struct LayerDatabase<
     Database: DatabaseDescription,
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
-> {
-    database_core:
-        DatabaseCore<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>,
-}
+>(DatabaseCore<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>);
 
 impl<
     'a,
@@ -28,32 +23,42 @@ impl<
 > LayerDatabase<'a, Focus, Mutex, Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
 {
     pub const fn new(data: Database::Data, focus_handler: Focus) -> Self {
-        Self {
-            database_core: DatabaseCore::new(data, focus_handler),
-        }
+        Self(DatabaseCore::new(data, focus_handler))
+    }
+
+    pub fn subscribe(
+        &self,
+        subscriber: &'a dyn Subscriber<Database::FlatKey>,
+        key: Database::FlatKey,
+    ) -> Result<(), SubscriberError> {
+        self.0.subscribe(subscriber, key)
+    }
+
+    pub fn notify_subscribers(&self) {
+        self.0.notify_subscribers();
     }
 
     pub fn get_absolute(
         &self,
         key: Database::AbsKey,
     ) -> Result<Database::FlatField, DatabaseError> {
-        self.database_core.get_absolute(key)
+        self.0.get_absolute(key)
     }
 
     pub fn get(&self, key: Database::FlatKey) -> Result<Database::FlatField, DatabaseError> {
-        self.database_core.get_flat(key)
+        self.0.get_flat(key)
     }
 
     pub fn set_absolute(&self, field: Database::AbsField) -> Result<(), DatabaseError> {
-        self.database_core.set_absolute(field)
+        self.0.set_absolute(field)
     }
 
     pub fn set(&self, field: Database::FlatField) -> Result<(), DatabaseError> {
-        self.database_core.set_flat(field)
+        self.0.set_flat(field)
     }
 
     pub fn clone(&self, other: &Database::Data) -> Result<(), DatabaseError> {
-        self.database_core.clone(other)
+        self.0.clone(other)
     }
 
     pub fn clone_path<FocusType, Path, InternalAbsPair>(
@@ -66,7 +71,7 @@ impl<
         InternalAbsPair: Pair,
         Database::Data: FolderHandler<Path, Database>,
     {
-        self.database_core
+        self.0
             .clone_path::<FocusType, Path, InternalAbsPair>(path, other)
     }
 
@@ -79,7 +84,7 @@ impl<
             FolderFocus<FocusType, Path, (Database::AbsKey, Database::AbsField), InternalAbsPair>,
         Database::Data: FolderHandler<Path, Database>,
     {
-        self.database_core
+        self.0
             .get_focus::<FocusType, Path, AbsPair, InternalAbsPair>()
     }
 
@@ -95,8 +100,7 @@ impl<
             FolderFocus<FocusType, Path, (Database::AbsKey, Database::AbsField), InternalAbsPair>,
         Database::Data: FolderHandler<Path, Database>,
     {
-        self.database_core
-            .set_focus::<FocusType, Path, InternalAbsPair>(focus)
+        self.0.set_focus::<FocusType, Path, InternalAbsPair>(focus)
     }
 }
 
@@ -183,7 +187,7 @@ pub(crate) mod test {
         std::println!(
             "Database inner 1 param 4: {}. Flat res {:?}",
             database
-                .database_core
+                .0
                 .data
                 .with(|internal| { internal.data.inner1.param4 }),
             res1
@@ -192,7 +196,7 @@ pub(crate) mod test {
         std::println!(
             "Database inner 2 param 4: {}. Flat res {:?}",
             database
-                .database_core
+                .0
                 .data
                 .with(|internal| { internal.data.inner2.param4 }),
             res2
