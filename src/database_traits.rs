@@ -1,4 +1,4 @@
-use crate::{DataFieldAccessor, FolderHandler};
+use crate::{DataFieldAccessor, Folder, FolderHandler};
 
 pub trait VariantCount {
     const COUNT: usize;
@@ -103,14 +103,14 @@ pub trait DatabaseDescription: Sized {
     type FlatKey: FlatKeyConstraints<Self::AbsKey>;
     type FlatField: FlatFieldConstraints<Self::AbsField, Self::FlatKey>;
 
-    type Data: DataFieldAccessor<Self::AbsKey, Self::AbsField> + FolderHandler<(), Self>;
+    type Data: DataFieldAccessor<Self::AbsKey, Self::AbsField> + Folder<Self>;
 }
 
 impl<Abs, Flat, Data> DatabaseDescription for (Abs, Flat, Data)
 where
     Abs: AbsPair,
     Flat: FlatPair<Abs>,
-    Data: DataFieldAccessor<Abs::Key, Abs::Field> + FolderHandler<(), Self>,
+    Data: DataFieldAccessor<Abs::Key, Abs::Field> + Folder<Self>,
 {
     type AbsKey = Abs::Key;
     type AbsField = Abs::Field;
@@ -129,7 +129,7 @@ impl<Description: DatabaseDescription> PathDescription for Description {
 pub trait FlatDatabaseDescription: Sized {
     type Key: AbsKeyConstraints + FlatKeyConstraints<Self::Key>;
     type Field: AbsFieldConstraints<Self::Key> + FlatFieldConstraints<Self::Field, Self::Key>;
-    type Data: DataFieldAccessor<Self::Key, Self::Field> + FolderHandler<(), Self>;
+    type Data: DataFieldAccessor<Self::Key, Self::Field> + Folder<Self>;
 }
 
 impl<Database: FlatDatabaseDescription> DatabaseDescription for Database {
@@ -143,7 +143,7 @@ impl<Database: FlatDatabaseDescription> DatabaseDescription for Database {
 impl<Pair, Data> FlatDatabaseDescription for (Pair, Data)
 where
     Pair: AbsFlatPair,
-    Data: DataFieldAccessor<Pair::Key, Pair::Field> + FolderHandler<(), Self>,
+    Data: DataFieldAccessor<Pair::Key, Pair::Field> + Folder<Self>,
 {
     type Key = Pair::Key;
     type Field = Pair::Field;

@@ -49,8 +49,8 @@ impl<
         self.0.set_absolute(field)
     }
 
-    pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {
-        self.0.clone(&other.0)
+    pub fn clone(&self, other: &Database::Data) -> Result<(), DatabaseError> {
+        self.0.clone(&other)
     }
 }
 

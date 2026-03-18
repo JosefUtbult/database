@@ -1,5 +1,6 @@
 use crate::{
-    DatabaseDescription, FocusHandler,
+    DatabaseDescription, FocusConstraints, FocusHandler, FolderFocus, FolderHandler, Pair,
+    PathConstraints,
     database_core::{DatabaseCore, DatabaseError},
 };
 
@@ -32,10 +33,6 @@ impl<
         }
     }
 
-    pub fn get_focus_handler(&self) -> &Focus {
-        &self.database_core.focus_handler
-    }
-
     pub fn get_absolute(
         &self,
         key: Database::AbsKey,
@@ -44,8 +41,7 @@ impl<
     }
 
     pub fn get(&self, key: Database::FlatKey) -> Result<Database::FlatField, DatabaseError> {
-        let abs_key = self.database_core.focus_handler.get_focus_key(key);
-        self.get_absolute(abs_key)
+        self.database_core.get_flat(key)
     }
 
     pub fn set_absolute(&self, field: Database::AbsField) -> Result<(), DatabaseError> {
@@ -53,12 +49,54 @@ impl<
     }
 
     pub fn set(&self, field: Database::FlatField) -> Result<(), DatabaseError> {
-        let abs_field = self.database_core.focus_handler.get_focus_field(field);
-        self.set_absolute(abs_field)
+        self.database_core.set_flat(field)
     }
 
-    pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {
-        self.database_core.clone(&other.database_core)
+    pub fn clone(&self, other: &Database::Data) -> Result<(), DatabaseError> {
+        self.database_core.clone(other)
+    }
+
+    pub fn clone_path<FocusType, Path, InternalAbsPair>(
+        &mut self,
+        path: Path,
+        other: &<Database::Data as FolderHandler<Path, Database>>::Content,
+    ) -> Result<(), DatabaseError>
+    where
+        Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
+        InternalAbsPair: Pair,
+        Database::Data: FolderHandler<Path, Database>,
+    {
+        self.database_core
+            .clone_path::<FocusType, Path, InternalAbsPair>(path, other)
+    }
+
+    pub fn get_focus<FocusType, Path, AbsPair, InternalAbsPair>(&self) -> FocusType
+    where
+        FocusType: FocusConstraints,
+        Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
+        InternalAbsPair: Pair,
+        Focus:
+            FolderFocus<FocusType, Path, (Database::AbsKey, Database::AbsField), InternalAbsPair>,
+        Database::Data: FolderHandler<Path, Database>,
+    {
+        self.database_core
+            .get_focus::<FocusType, Path, AbsPair, InternalAbsPair>()
+    }
+
+    pub fn set_focus<FocusType, Path, InternalAbsPair>(
+        &self,
+        focus: FocusType,
+    ) -> Result<(), DatabaseError>
+    where
+        FocusType: FocusConstraints,
+        Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
+        InternalAbsPair: Pair,
+        Focus:
+            FolderFocus<FocusType, Path, (Database::AbsKey, Database::AbsField), InternalAbsPair>,
+        Database::Data: FolderHandler<Path, Database>,
+    {
+        self.database_core
+            .set_focus::<FocusType, Path, InternalAbsPair>(focus)
     }
 }
 
@@ -66,7 +104,6 @@ impl<
 pub(crate) mod test {
     use crate::{
         LayerDatabase,
-        focus_handler::FolderFocus,
         layer::{AbsFields, AbsKeys, Fields, Keys, MyInnerDataFocus, MyLayerData, my_inner_data},
         mutex::test_mutex::Mutex,
         test_data_focus_handler::MyFocusHandler,
@@ -189,9 +226,7 @@ pub(crate) mod test {
         let database = build_database();
         database.set(Fields::Param4(1)).unwrap();
 
-        database
-            .get_focus_handler()
-            .set_focus(MyInnerDataFocus::Inner2);
+        database.set_focus(MyInnerDataFocus::Inner2).unwrap();
 
         database.set(Fields::Param4(2)).unwrap();
 
@@ -210,17 +245,16 @@ pub(crate) mod test {
     #[test]
     fn set_get_data_focus_change() {
         let database = build_database();
-        let focus_handler = database.get_focus_handler();
 
         database.set(Fields::Param4(1)).unwrap();
 
-        focus_handler.set_focus(MyInnerDataFocus::Inner2);
+        database.set_focus(MyInnerDataFocus::Inner2).unwrap();
         database.set(Fields::Param4(2)).unwrap();
 
-        focus_handler.set_focus(MyInnerDataFocus::Inner1);
+        database.set_focus(MyInnerDataFocus::Inner1).unwrap();
         let res1 = database.get(Keys::Param4).unwrap();
 
-        focus_handler.set_focus(MyInnerDataFocus::Inner2);
+        database.set_focus(MyInnerDataFocus::Inner2).unwrap();
         let res2 = database.get(Keys::Param4).unwrap();
 
         assert!(matches!(res1, Fields::Param4(1)));

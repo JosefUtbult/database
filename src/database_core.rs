@@ -2,9 +2,9 @@ use heapless::Vec;
 use mutex_traits::{ConstInit, ScopedRawMutex};
 
 use crate::{
-    AllVariants, DataFieldAccessor, DatabaseDescription, DynamicKeySet, FocusConstraints,
-    FocusHandler, FolderFocus, FolderHandler, KeySet, Pair, PathConstraints, SubscriberData, ToKey,
-    VariantCount, focus_handler, mutex::ScopedLocked,
+    DataFieldAccessor, DatabaseDescription, FocusConstraints, FocusHandler, Folder, FolderFocus,
+    FolderHandler, KeySet, Pair, PathConstraints, SubscriberData, ToKey, VariantCount,
+    mutex::ScopedLocked,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,41 +34,27 @@ impl<
     const FLAT_PARAMETER_COUNT: usize,
 > InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>
 {
-    pub(crate) const fn new(data: Database::Data) -> Self {
+    const fn new(data: Database::Data) -> Self {
         Self { data }
     }
 
-    pub(crate) fn clone<Focus>(
+    fn clone(
         &mut self,
-        other: &Self,
-        focus_handler: &Focus,
-    ) -> Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>
-    where
-        Focus: FocusHandler<Database>,
-    {
-        let mut changed_key_set: KeySet<Database::AbsKey, Database::FlatKey, FLAT_PARAMETER_COUNT> =
+        other: &Database::Data,
+    ) -> Result<Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>, DatabaseError> {
+        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, FLAT_PARAMETER_COUNT> =
             KeySet::new();
-        for abs_key in <Database::AbsKey as AllVariants>::ALL_VARIANTS.iter() {
-            let this_abs_field = self.data.get(*abs_key);
-            let other_abs_field = other.data.get(*abs_key);
 
-            if this_abs_field != other_abs_field {
-                self.data.set(other_abs_field);
-                let focused_abs_key = focus_handler.get_focus_key((*abs_key).into());
-                if focused_abs_key == *abs_key {
-                    changed_key_set.insert_flat_key((*abs_key).into()).unwrap()
-                }
-            }
-        }
+        self.data.clone(&mut differing_keys, other)?;
 
-        changed_key_set.to_vector()
+        Ok(differing_keys.to_vector())
     }
 
-    pub(crate) fn get_absolute(&self, key: Database::AbsKey) -> Database::FlatField {
+    fn get_absolute(&self, key: Database::AbsKey) -> Database::FlatField {
         self.data.get(key).into()
     }
 
-    pub(crate) fn get_flat<Focus: FocusHandler<Database>>(
+    fn get_flat<Focus: FocusHandler<Database>>(
         &self,
         focus_handler: &Focus,
         key: Database::FlatKey,
@@ -77,7 +63,7 @@ impl<
         self.get_absolute(abs_key)
     }
 
-    pub(crate) fn set_absolute<Focus: FocusHandler<Database>>(
+    fn set_absolute<Focus: FocusHandler<Database>>(
         &mut self,
         focus_handler: &Focus,
         abs_field: Database::AbsField,
@@ -101,7 +87,7 @@ impl<
         }
     }
 
-    pub(crate) fn set_flat<Focus: FocusHandler<Database>>(
+    fn set_flat<Focus: FocusHandler<Database>>(
         &mut self,
         focus_handler: &Focus,
         flat_field: Database::FlatField,
@@ -119,7 +105,7 @@ impl<
         }
     }
 
-    pub fn on_focus_change<FocusType, Path, InternalAbsPair>(
+    fn on_focus_change<FocusType, Path, InternalAbsPair>(
         &self,
         lhs: Path,
         rhs: Path,
@@ -133,8 +119,29 @@ impl<
         let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, FLAT_PARAMETER_COUNT> =
             KeySet::new();
 
-        let other: &<Database::Data as FolderHandler<Path, Database>>::Content = self.data.get_at(rhs);
-        match self.data.compare(&mut differing_keys, lhs, other) {
+        let other: &<Database::Data as FolderHandler<Path, Database>>::Content =
+            self.data.get_at(rhs);
+
+        match self.data.compare_path(&mut differing_keys, lhs, other) {
+            Ok(()) => Ok(differing_keys.to_vector()),
+            Err(error) => Err(error),
+        }
+    }
+
+    fn clone_path<FocusType, Path, InternalAbsPair>(
+        &mut self,
+        path: Path,
+        other: &<Database::Data as FolderHandler<Path, Database>>::Content,
+    ) -> Result<Vec<Database::FlatKey, FLAT_PARAMETER_COUNT>, DatabaseError>
+    where
+        Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
+        InternalAbsPair: Pair,
+        Database::Data: FolderHandler<Path, Database>,
+    {
+        let mut differing_keys: KeySet<Database::AbsKey, Database::FlatKey, FLAT_PARAMETER_COUNT> =
+            KeySet::new();
+
+        match self.data.clone_path(&mut differing_keys, path, other) {
             Ok(()) => Ok(differing_keys.to_vector()),
             Err(error) => Err(error),
         }
@@ -149,10 +156,10 @@ pub(crate) struct DatabaseCore<
     const ABS_PARAMETER_COUNT: usize,
     const FLAT_PARAMETER_COUNT: usize,
 > {
-    pub(crate) data:
+    pub data:
         ScopedLocked<Mutex, InternalMutable<Database, ABS_PARAMETER_COUNT, FLAT_PARAMETER_COUNT>>,
-    pub(crate) subscribers: SubscriberData<'a, Mutex, Database, FLAT_PARAMETER_COUNT>,
-    pub(crate) focus_handler: Focus,
+    pub subscribers: SubscriberData<'a, Mutex, Database, FLAT_PARAMETER_COUNT>,
+    pub focus_handler: Focus,
 }
 
 impl<
@@ -189,7 +196,6 @@ impl<
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn get_flat(
         &self,
         key: Database::FlatKey,
@@ -220,7 +226,6 @@ impl<
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn set_flat(&self, flat_field: Database::FlatField) -> Result<(), DatabaseError> {
         let flat_key = flat_field.to_key();
         match self
@@ -237,8 +242,7 @@ impl<
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_focus<FocusType, Path, AbsPair, InternalAbsPair>(&self) -> FocusType
+    pub(crate) fn get_focus<FocusType, Path, AbsPair, InternalAbsPair>(&self) -> FocusType
     where
         FocusType: FocusConstraints,
         Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
@@ -250,8 +254,7 @@ impl<
         self.focus_handler.get_focus()
     }
 
-    #[allow(dead_code)]
-    pub fn set_focus<FocusType, Path, InternalAbsPair>(
+    pub(crate) fn set_focus<FocusType, Path, InternalAbsPair>(
         &self,
         focus: FocusType,
     ) -> Result<(), DatabaseError>
@@ -294,19 +297,39 @@ impl<
         }
     }
 
-    pub fn clone(&self, other: &Self) -> Result<(), DatabaseError> {
-        match self.data.try_with(|internal| {
-            other
-                .data
-                .try_with(|other_internal| internal.clone(&other_internal, &self.focus_handler))
-        }) {
+    pub(crate) fn clone(&self, other: &Database::Data) -> Result<(), DatabaseError> {
+        match self.data.try_with(|internal| internal.clone(other)) {
             None => Err(DatabaseError::LockFail),
-            Some(changes) => match changes {
-                None => Err(DatabaseError::LockFail),
-                Some(changes) => {
+            Some(result) => match result {
+                Ok(changes) => {
                     self.subscribers.on_changes(&changes);
                     Ok(())
                 }
+                Err(error) => Err(error),
+            },
+        }
+    }
+
+    pub(crate) fn clone_path<FocusType, Path, InternalAbsPair>(
+        &mut self,
+        path: Path,
+        other: &<Database::Data as FolderHandler<Path, Database>>::Content,
+    ) -> Result<(), DatabaseError>
+    where
+        Path: PathConstraints<(Database::AbsKey, Database::AbsField), InternalAbsPair>,
+        InternalAbsPair: Pair,
+        Database::Data: FolderHandler<Path, Database>,
+    {
+        match self.data.try_with(|internal| {
+            internal.clone_path::<FocusType, Path, InternalAbsPair>(path, other)
+        }) {
+            None => Err(DatabaseError::LockFail),
+            Some(result) => match result {
+                Ok(changes) => {
+                    self.subscribers.on_changes(&changes);
+                    Ok(())
+                }
+                Err(error) => Err(error),
             },
         }
     }

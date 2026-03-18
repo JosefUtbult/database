@@ -9,7 +9,9 @@ pub(crate) type TestFlatDatabaseDescription =
 
 pub(crate) mod flat {
     use crate::{
-        database_core::DatabaseError, test_types::TestFlatDatabaseDescription, AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor, DataFieldTryAccessor, DynamicKeySet, FlatFieldConstraints, FlatKeyConstraints, FolderHandler, ToFromUsize, ToKey, VariantCount
+        AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
+        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, Folder, FolderHandler,
+        ToFromUsize, ToKey, VariantCount, test_types::TestFlatDatabaseDescription,
     };
 
     pub(crate) struct MyFlatData {
@@ -177,39 +179,57 @@ pub(crate) mod flat {
         }
     }
 
-    impl FolderHandler<(), TestFlatDatabaseDescription> for MyFlatData {
-        type Content = MyFlatData;
-
-        fn get_at<'a>(
-            &'a self,
-            _path: ()
-        ) -> &'a Self::Content {
-            self
-        }
-
-        fn get_at_mut<'a>(
-            &'a mut self,
-            _path: ()
-        ) -> &'a mut Self::Content {
-            self
-        }
-
+    impl Folder<TestFlatDatabaseDescription> for MyFlatData {
         fn compare(
             &self,
-            _differing_keys: &mut dyn DynamicKeySet<MyFlatKeys, MyFlatKeys>,
-            _path: (),
-            _other: &Self
-        ) -> Result<(), DatabaseError> {
-            todo!()
+            differing_keys: &mut dyn crate::DynamicKeySet<MyFlatKeys, MyFlatKeys>,
+            other: &Self,
+        ) -> Result<(), crate::DatabaseError> {
+            if self.param1 != other.param1 {
+                differing_keys.insert_flat_key(MyFlatKeys::Param1)?;
+            }
+
+            if self.param2 != other.param2 {
+                differing_keys.insert_flat_key(MyFlatKeys::Param2)?;
+            }
+
+            if self.param3 != other.param3 {
+                differing_keys.insert_flat_key(MyFlatKeys::Param3)?;
+            }
+
+            if self.param4 != other.param4 {
+                differing_keys.insert_flat_key(MyFlatKeys::Param4)?;
+            }
+
+            Ok(())
         }
 
         fn clone(
             &mut self,
-            _differing_keys: &mut dyn DynamicKeySet<MyFlatKeys, MyFlatKeys>,
-            _path: (),
-            _other: &Self
-        ) -> Result<(), DatabaseError> {
-            todo!()
+            differing_keys: &mut dyn crate::DynamicKeySet<MyFlatKeys, MyFlatKeys>,
+            other: &Self,
+        ) -> Result<(), crate::DatabaseError> {
+            if self.param1 != other.param1 {
+                self.param1 = other.param1;
+                differing_keys.insert_flat_key(MyFlatKeys::Param1)?;
+            }
+
+            if self.param2 != other.param2 {
+                self.param2 = other.param2;
+                differing_keys.insert_flat_key(MyFlatKeys::Param2)?;
+            }
+
+            if self.param3 != other.param3 {
+                self.param3 = other.param3;
+                differing_keys.insert_flat_key(MyFlatKeys::Param3)?;
+            }
+
+            if self.param4 != other.param4 {
+                self.param4 = other.param4;
+                differing_keys.insert_flat_key(MyFlatKeys::Param4)?;
+            }
+
+            Ok(())
         }
     }
 }
