@@ -33,7 +33,7 @@ pub trait FolderFocus<
 }
 
 #[cfg(test)]
-pub(crate) mod test_data_field_accessor {
+pub(crate) mod test_data_focus_handler {
     use core::sync::atomic::{AtomicU8, Ordering};
 
     use crate::{

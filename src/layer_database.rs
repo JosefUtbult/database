@@ -69,7 +69,7 @@ pub(crate) mod test {
         focus_handler::FolderFocus,
         layer::{AbsFields, AbsKeys, Fields, Keys, MyInnerDataFocus, MyLayerData, my_inner_data},
         mutex::test_mutex::Mutex,
-        test_data_field_accessor::MyFocusHandler,
+        test_data_focus_handler::MyFocusHandler,
         test_types::{
             TEST_LAYER_DATABASE_ABS_COUNT, TEST_LAYER_DATABASE_FLAT_COUNT,
             TestLayerDatabaseDescription,
