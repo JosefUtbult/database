@@ -1,7 +1,6 @@
 use crate::{
     DatabaseDescription, FlatDatabaseDescription, FocusHandler,
     database_core::{DatabaseCore, DatabaseError},
-    database_traits::ToKey,
 };
 
 use mutex_traits::{ConstInit, ScopedRawMutex};

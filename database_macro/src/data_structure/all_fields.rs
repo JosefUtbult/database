@@ -15,6 +15,7 @@ pub(crate) struct FieldPair {
 
 pub(crate) type FolderToFieldMap = HashMap<String, Vec<FieldPair>>;
 
+#[allow(dead_code)]
 pub(crate) fn find_folder_type(
     field_name: &String,
     folder_to_field_map: &FolderToFieldMap,

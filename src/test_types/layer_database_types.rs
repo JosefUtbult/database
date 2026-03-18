@@ -14,8 +14,6 @@ pub(crate) type TestLayerDatabaseDescription = (
 );
 
 pub(crate) mod layer {
-    use super::TestLayerDatabaseDescription;
-
     pub(crate) struct MyInnerInnerData {
         pub(crate) param6: u8,
     }
@@ -146,9 +144,7 @@ pub(crate) mod layer {
             }
         }
 
-        impl crate::ToFull<Fields, my_inner_inner_data::Fields>
-            for MyInnerInnerDataFolderPath
-        {
+        impl crate::ToFull<Fields, my_inner_inner_data::Fields> for MyInnerInnerDataFolderPath {
             fn build_full(&self, internal: my_inner_inner_data::Fields) -> Fields {
                 match self {
                     Self::Inner3 => Fields::Inner3(internal),
@@ -449,9 +445,7 @@ pub(crate) mod layer {
             }
         }
 
-        impl crate::ToFull<AbsFields, my_inner_inner_data::Fields>
-            for MyInnerInnerDataFolderPath
-        {
+        impl crate::ToFull<AbsFields, my_inner_inner_data::Fields> for MyInnerInnerDataFolderPath {
             fn build_full(&self, internal: my_inner_inner_data::Fields) -> AbsFields {
                 match self {
                     Self::Inner1(inner) => AbsFields::Inner1(inner.build_full(internal)),

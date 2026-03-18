@@ -4,10 +4,7 @@ use quote::{format_ident, quote};
 use crate::{
     DataStructure,
     casing::to_camel_case,
-    data_structure::{
-        absolute_path::get_field_name_and_type,
-        struct_data::{self, StructData},
-    },
+    data_structure::{absolute_path::get_field_name_and_type, struct_data::StructData},
 };
 
 fn generate_data_field_accessor(

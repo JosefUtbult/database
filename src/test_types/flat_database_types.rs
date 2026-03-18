@@ -10,8 +10,8 @@ pub(crate) type TestFlatDatabaseDescription =
 pub(crate) mod flat {
     use crate::{
         AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
-        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, Folder, FolderHandler,
-        ToFromUsize, ToKey, VariantCount, test_types::TestFlatDatabaseDescription,
+        DataFieldTryAccessor, FlatFieldConstraints, FlatKeyConstraints, Folder, ToFromUsize, ToKey,
+        VariantCount, test_types::TestFlatDatabaseDescription,
     };
 
     pub(crate) struct MyFlatData {

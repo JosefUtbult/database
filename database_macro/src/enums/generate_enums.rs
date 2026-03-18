@@ -1,5 +1,4 @@
 use core::panic;
-use std::{collections::HashMap, result};
 
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
@@ -7,11 +6,7 @@ use quote::{format_ident, quote};
 use crate::{
     DataStructure,
     casing::to_camel_case,
-    data_structure::{
-        absolute_path::{AbsolutePath, AbsolutePathField},
-        all_fields::find_folder_type,
-        struct_data::StructData,
-    },
+    data_structure::{absolute_path::AbsolutePathField, struct_data::StructData},
 };
 
 pub(crate) fn generate_abs_enums(

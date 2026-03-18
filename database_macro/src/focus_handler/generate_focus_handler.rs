@@ -4,11 +4,7 @@ use quote::{format_ident, quote};
 use crate::{
     DataStructure,
     casing::to_camel_case,
-    data_structure::{
-        self,
-        absolute_path::{AbsolutePathField, get_parent_struct_type},
-        conditional_paths::{AllFolderFields, FolderFocusPath, FolderFocusPathVector},
-    },
+    data_structure::conditional_paths::{AllFolderFields, FolderFocusPath, FolderFocusPathVector},
     enums::abs_path_to_token_stream,
 };
 

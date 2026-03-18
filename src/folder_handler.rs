@@ -478,11 +478,15 @@ pub(crate) mod test_data_folder_handler {
         data2.param6 = 12;
 
         let mut differing_keys = create_key_set();
-        data1.compare_path(
-            &mut differing_keys,
-            MyInnerInnerDataFolderPath::Inner1(my_inner_data::MyInnerInnerDataFolderPath::Inner3),
-            &data2,
-        ).unwrap();
+        data1
+            .compare_path(
+                &mut differing_keys,
+                MyInnerInnerDataFolderPath::Inner1(
+                    my_inner_data::MyInnerInnerDataFolderPath::Inner3,
+                ),
+                &data2,
+            )
+            .unwrap();
 
         let differing_keys = differing_keys.to_vector();
 
@@ -497,11 +501,15 @@ pub(crate) mod test_data_folder_handler {
         data2.param6 = 12;
 
         let mut differing_keys = create_key_set();
-        data1.clone_path(
-            &mut differing_keys,
-            MyInnerInnerDataFolderPath::Inner1(my_inner_data::MyInnerInnerDataFolderPath::Inner3),
-            &data2,
-        ).unwrap();
+        data1
+            .clone_path(
+                &mut differing_keys,
+                MyInnerInnerDataFolderPath::Inner1(
+                    my_inner_data::MyInnerInnerDataFolderPath::Inner3,
+                ),
+                &data2,
+            )
+            .unwrap();
 
         let differing_keys = differing_keys.to_vector();
 

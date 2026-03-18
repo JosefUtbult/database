@@ -8,7 +8,6 @@ use crate::{
     casing::to_camel_case,
     data_structure::{
         absolute_path::{AbsolutePath, AbsolutePathField, get_field_name_and_type},
-        all_fields::find_folder_type,
         struct_data::{StructData, StructMap},
     },
 };

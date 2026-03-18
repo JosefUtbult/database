@@ -1,4 +1,4 @@
-use crate::{DataFieldAccessor, Folder, FolderHandler};
+use crate::{DataFieldAccessor, Folder};
 
 pub trait VariantCount {
     const COUNT: usize;
