@@ -6,6 +6,7 @@ mod database_traits;
 pub use database_traits::*;
 
 mod database_core;
+pub use database_core::*;
 
 mod flat_database;
 pub use flat_database::*;

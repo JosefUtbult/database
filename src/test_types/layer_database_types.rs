@@ -1,20 +1,20 @@
-pub(crate) const TEST_LAYER_DATABASE_ABS_COUNT: usize = layer::MY_DATA_ABS_VARIANT_COUNT;
-pub(crate) const TEST_LAYER_DATABASE_FLAT_COUNT: usize = layer::MY_DATA_FLAT_VARIANT_COUNT;
+pub(crate) const TEST_LAYER_DATABASE_ABS_COUNT: usize =
+    layer::my_layer_data::MY_DATA_ABS_VARIANT_COUNT;
+
+pub(crate) const TEST_LAYER_DATABASE_FLAT_COUNT: usize =
+    layer::my_layer_data::MY_DATA_FLAT_VARIANT_COUNT;
 
 pub(crate) type TestLayerDatabaseDescription = (
-    (layer::MyDataAbsKeys, layer::MyDataAbsFields),
-    (layer::MyDataFlatKeys, layer::MyDataFlatFields),
+    (
+        layer::my_layer_data::AbsKeys,
+        layer::my_layer_data::AbsFields,
+    ),
+    (layer::my_layer_data::Keys, layer::my_layer_data::Fields),
     layer::MyLayerData,
 );
 
 pub(crate) mod layer {
-    use crate::{
-        AbsFieldConstraints, AbsKeyConstraints, AccessorError, AllVariants, DataFieldAccessor,
-        DataFieldTryAccessor, DynamicKeySet, FlatFieldConstraints, FlatKeyConstraints,
-        FocusConstraints, FolderHandler, PathConstraints, PathDescription, ToFromUsize, ToFull,
-        ToKey, VariantCount, database_core::DatabaseError,
-        test_types::TestLayerDatabaseDescription,
-    };
+    use super::TestLayerDatabaseDescription;
 
     pub(crate) struct MyInnerInnerData {
         pub(crate) param6: u8,
@@ -23,6 +23,60 @@ pub(crate) mod layer {
     impl MyInnerInnerData {
         pub(crate) const fn new() -> Self {
             Self { param6: 0 }
+        }
+    }
+
+    pub(crate) mod my_inner_inner_data {
+        use super::MyInnerInnerData;
+        use crate::ToKey;
+
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum Keys {
+            Param6,
+        }
+
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum Fields {
+            Param6(u8),
+        }
+
+        impl ToKey<Keys> for Fields {
+            fn to_key(&self) -> Keys {
+                match self {
+                    Fields::Param6(_) => Keys::Param6,
+                }
+            }
+        }
+
+        impl crate::DataFieldAccessor<Keys, Fields> for MyInnerInnerData {
+            fn get(&self, key: Keys) -> Fields {
+                match key {
+                    Keys::Param6 => Fields::Param6(self.param6.clone()),
+                }
+            }
+
+            fn set(&mut self, field: Fields) {
+                match field {
+                    Fields::Param6(value) => self.param6 = value,
+                }
+            }
+        }
+
+        impl crate::DataFieldTryAccessor<Keys, u8> for MyInnerInnerData {
+            fn try_get(&self, key: Keys) -> Result<u8, crate::AccessorError> {
+                match key {
+                    Keys::Param6 => Ok(self.param6.clone()),
+                }
+            }
+
+            fn try_set(&mut self, key: Keys, value: u8) -> Result<(), crate::AccessorError> {
+                match key {
+                    Keys::Param6 => {
+                        self.param6 = value;
+                        Ok(())
+                    }
+                }
+            }
         }
     }
 
@@ -40,6 +94,128 @@ pub(crate) mod layer {
                 param5: false,
                 inner3: MyInnerInnerData::new(),
                 inner4: MyInnerInnerData::new(),
+            }
+        }
+    }
+
+    pub(crate) mod my_inner_data {
+        use super::{MyInnerData, my_inner_inner_data};
+        use crate::ToKey;
+
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum Keys {
+            Param4,
+            Param5,
+            Inner3(my_inner_inner_data::Keys),
+            Inner4(my_inner_inner_data::Keys),
+        }
+
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum Fields {
+            Param4(u8),
+            Param5(bool),
+            Inner3(my_inner_inner_data::Fields),
+            Inner4(my_inner_inner_data::Fields),
+        }
+
+        #[allow(dead_code)]
+        #[allow(non_camel_case_types)]
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum MyInnerInnerDataFolderPath {
+            Inner3,
+            Inner4,
+        }
+
+        impl ToKey<Keys> for Fields {
+            fn to_key(&self) -> Keys {
+                match self {
+                    Fields::Param4(_) => Keys::Param4,
+                    Fields::Param5(_) => Keys::Param5,
+                    Fields::Inner3(field) => Keys::Inner3(field.to_key()),
+                    Fields::Inner4(field) => Keys::Inner4(field.to_key()),
+                }
+            }
+        }
+
+        impl crate::ToFull<Keys, my_inner_inner_data::Keys> for MyInnerInnerDataFolderPath {
+            fn build_full(&self, internal: my_inner_inner_data::Keys) -> Keys {
+                match self {
+                    Self::Inner3 => Keys::Inner3(internal),
+                    Self::Inner4 => Keys::Inner3(internal),
+                }
+            }
+        }
+
+        impl crate::ToFull<Fields, my_inner_inner_data::Fields>
+            for MyInnerInnerDataFolderPath
+        {
+            fn build_full(&self, internal: my_inner_inner_data::Fields) -> Fields {
+                match self {
+                    Self::Inner3 => Fields::Inner3(internal),
+                    Self::Inner4 => Fields::Inner3(internal),
+                }
+            }
+        }
+
+        impl crate::DataFieldAccessor<Keys, Fields> for MyInnerData {
+            fn get(&self, key: Keys) -> Fields {
+                match key {
+                    Keys::Param4 => Fields::Param4(self.param4.clone()),
+                    Keys::Param5 => Fields::Param5(self.param5.clone()),
+                    Keys::Inner3(key) => Fields::Inner3(self.inner3.get(key)),
+                    Keys::Inner4(key) => Fields::Inner4(self.inner4.get(key)),
+                }
+            }
+
+            fn set(&mut self, field: Fields) {
+                match field {
+                    Fields::Param4(value) => self.param4 = value,
+                    Fields::Param5(value) => self.param5 = value,
+                    Fields::Inner3(field) => self.inner3.set(field),
+                    Fields::Inner4(field) => self.inner4.set(field),
+                }
+            }
+        }
+
+        impl crate::DataFieldTryAccessor<Keys, u8> for MyInnerData {
+            fn try_get(&self, key: Keys) -> Result<u8, crate::AccessorError> {
+                match key {
+                    Keys::Param4 => todo!(),
+                    Keys::Inner3(key) => self.inner3.try_get(key),
+                    Keys::Inner4(key) => self.inner4.try_get(key),
+                    _ => Err(crate::AccessorError::TypeMissmatch("u8")),
+                }
+            }
+
+            fn try_set(&mut self, key: Keys, value: u8) -> Result<(), crate::AccessorError> {
+                match key {
+                    Keys::Param4 => {
+                        self.param4 = value;
+                        Ok(())
+                    }
+                    Keys::Inner3(key) => self.inner3.try_set(key, value),
+                    Keys::Inner4(key) => self.inner4.try_set(key, value),
+                    _ => Err(crate::AccessorError::TypeMissmatch("u8")),
+                }
+            }
+        }
+
+        impl crate::DataFieldTryAccessor<Keys, bool> for MyInnerData {
+            fn try_get(&self, key: Keys) -> Result<bool, crate::AccessorError> {
+                match key {
+                    Keys::Param5 => Ok(self.param5.clone()),
+                    _ => Err(crate::AccessorError::TypeMissmatch("bool")),
+                }
+            }
+
+            fn try_set(&mut self, key: Keys, value: bool) -> Result<(), crate::AccessorError> {
+                match key {
+                    Keys::Param5 => {
+                        self.param5 = value;
+                        Ok(())
+                    }
+                    _ => Err(crate::AccessorError::TypeMissmatch("bool")),
+                }
             }
         }
     }
@@ -64,637 +240,493 @@ pub(crate) mod layer {
         }
     }
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyInnerInnerDataKeys {
-        Param6,
-    }
+    pub(crate) mod my_layer_data {
+        use super::{MyLayerData, my_inner_data, my_inner_inner_data};
 
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyInnerInnerDataFields {
-        Param6(u8),
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyInnerDataKeys {
-        Param4,
-        Param5,
-        Inner3(MyInnerInnerDataKeys),
-        Inner4(MyInnerInnerDataKeys),
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyInnerDataFields {
-        Param4(u8),
-        Param5(bool),
-        Inner3(MyInnerInnerDataFields),
-        Inner4(MyInnerInnerDataFields),
-    }
-
-    #[allow(dead_code)]
-    #[allow(non_camel_case_types)]
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyInnerData_MyInnerInnerData_FolderPath {
-        Inner3,
-        Inner4,
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyDataAbsKeys {
-        Param1,
-        Param2,
-        Param3,
-        Inner1(MyInnerDataKeys),
-        Inner2(MyInnerDataKeys),
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    #[allow(dead_code)]
-    pub(crate) enum MyDataAbsFields {
-        Param1(u8),
-        Param2(bool),
-        Param3(u8),
-        Inner1(MyInnerDataFields),
-        Inner2(MyInnerDataFields),
-    }
-
-    #[allow(dead_code)]
-    #[allow(non_camel_case_types)]
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyInnerInnerDataFocus {
-        Inner3,
-        Inner4,
-    }
-
-    #[allow(dead_code)]
-    #[allow(non_camel_case_types)]
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyInnerDataFocus {
-        Inner1,
-        Inner2,
-    }
-
-    #[allow(dead_code)]
-    #[allow(non_camel_case_types)]
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyLayerData_MyInnerInnerData_FolderPath {
-        Inner1(MyInnerData_MyInnerInnerData_FolderPath),
-        Inner2(MyInnerData_MyInnerInnerData_FolderPath),
-    }
-
-    #[allow(dead_code)]
-    #[allow(non_camel_case_types)]
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyLayerData_MyInnerData_FolderPath {
-        Inner1,
-        Inner2,
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyDataFlatKeys {
-        Param1,
-        Param2,
-        Param3,
-        Param4,
-        Param5,
-        Param6,
-    }
-
-    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-    pub(crate) enum MyDataFlatFields {
-        Param1(u8),
-        Param2(bool),
-        Param3(u8),
-        Param4(u8),
-        Param5(bool),
-        Param6(u8),
-    }
-
-    impl ToKey<MyInnerInnerDataKeys> for MyInnerInnerDataFields {
-        fn to_key(&self) -> MyInnerInnerDataKeys {
-            match self {
-                MyInnerInnerDataFields::Param6(_) => MyInnerInnerDataKeys::Param6,
-            }
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum AbsKeys {
+            Param1,
+            Param2,
+            Param3,
+            Inner1(my_inner_data::Keys),
+            Inner2(my_inner_data::Keys),
         }
-    }
 
-    impl ToKey<MyInnerDataKeys> for MyInnerDataFields {
-        fn to_key(&self) -> MyInnerDataKeys {
-            match self {
-                MyInnerDataFields::Param4(_) => MyInnerDataKeys::Param4,
-                MyInnerDataFields::Param5(_) => MyInnerDataKeys::Param5,
-                MyInnerDataFields::Inner3(field) => MyInnerDataKeys::Inner3(field.to_key()),
-                MyInnerDataFields::Inner4(field) => MyInnerDataKeys::Inner4(field.to_key()),
-            }
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        #[allow(dead_code)]
+        pub(crate) enum AbsFields {
+            Param1(u8),
+            Param2(bool),
+            Param3(u8),
+            Inner1(my_inner_data::Fields),
+            Inner2(my_inner_data::Fields),
         }
-    }
 
-    impl ToKey<MyDataAbsKeys> for MyDataAbsFields {
-        fn to_key(&self) -> MyDataAbsKeys {
-            match self {
-                MyDataAbsFields::Param1(_) => MyDataAbsKeys::Param1,
-                MyDataAbsFields::Param2(_) => MyDataAbsKeys::Param2,
-                MyDataAbsFields::Param3(_) => MyDataAbsKeys::Param3,
-                MyDataAbsFields::Inner1(inner) => MyDataAbsKeys::Inner1(inner.to_key()),
-                MyDataAbsFields::Inner2(inner) => MyDataAbsKeys::Inner2(inner.to_key()),
-            }
+        #[allow(dead_code)]
+        #[allow(non_camel_case_types)]
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum MyInnerInnerDataFocus {
+            Inner3,
+            Inner4,
         }
-    }
 
-    impl ToKey<MyDataFlatKeys> for MyDataFlatFields {
-        fn to_key(&self) -> MyDataFlatKeys {
-            match self {
-                MyDataFlatFields::Param1(_) => MyDataFlatKeys::Param1,
-                MyDataFlatFields::Param2(_) => MyDataFlatKeys::Param2,
-                MyDataFlatFields::Param3(_) => MyDataFlatKeys::Param3,
-                MyDataFlatFields::Param4(_) => MyDataFlatKeys::Param4,
-                MyDataFlatFields::Param5(_) => MyDataFlatKeys::Param5,
-                MyDataFlatFields::Param6(_) => MyDataFlatKeys::Param6,
-            }
+        #[allow(dead_code)]
+        #[allow(non_camel_case_types)]
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum MyInnerDataFocus {
+            Inner1,
+            Inner2,
         }
-    }
 
-    impl From<MyDataAbsKeys> for MyDataFlatKeys {
-        fn from(value: MyDataAbsKeys) -> Self {
-            match value {
-                MyDataAbsKeys::Param1 => MyDataFlatKeys::Param1,
-                MyDataAbsKeys::Param2 => MyDataFlatKeys::Param2,
-                MyDataAbsKeys::Param3 => MyDataFlatKeys::Param3,
-                MyDataAbsKeys::Inner1(inner) | MyDataAbsKeys::Inner2(inner) => match inner {
-                    MyInnerDataKeys::Param4 => MyDataFlatKeys::Param4,
-                    MyInnerDataKeys::Param5 => MyDataFlatKeys::Param5,
-                    MyInnerDataKeys::Inner3(inner) | MyInnerDataKeys::Inner4(inner) => {
-                        match inner {
-                            MyInnerInnerDataKeys::Param6 => MyDataFlatKeys::Param6,
-                        }
-                    }
-                },
-            }
+        #[allow(dead_code)]
+        #[allow(non_camel_case_types)]
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum MyInnerInnerDataFolderPath {
+            Inner1(my_inner_data::MyInnerInnerDataFolderPath),
+            Inner2(my_inner_data::MyInnerInnerDataFolderPath),
         }
-    }
 
-    impl ToFromUsize for MyDataFlatKeys {
-        fn to_usize(&self) -> usize {
-            match self {
-                Self::Param1 => 0,
-                Self::Param2 => 1,
-                Self::Param3 => 2,
-                Self::Param4 => 3,
-                Self::Param5 => 4,
-                Self::Param6 => 5,
+        #[allow(dead_code)]
+        #[allow(non_camel_case_types)]
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum MyInnerDataFolderPath {
+            Inner1,
+            Inner2,
+        }
+
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum Keys {
+            Param1,
+            Param2,
+            Param3,
+            Param4,
+            Param5,
+            Param6,
+        }
+
+        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+        pub(crate) enum Fields {
+            Param1(u8),
+            Param2(bool),
+            Param3(u8),
+            Param4(u8),
+            Param5(bool),
+            Param6(u8),
+        }
+
+        impl crate::ToKey<AbsKeys> for AbsFields {
+            fn to_key(&self) -> AbsKeys {
+                match self {
+                    AbsFields::Param1(_) => AbsKeys::Param1,
+                    AbsFields::Param2(_) => AbsKeys::Param2,
+                    AbsFields::Param3(_) => AbsKeys::Param3,
+                    AbsFields::Inner1(inner) => AbsKeys::Inner1(inner.to_key()),
+                    AbsFields::Inner2(inner) => AbsKeys::Inner2(inner.to_key()),
+                }
             }
         }
 
-        fn try_from_usize(value: usize) -> Option<Self> {
-            match value {
-                0 => Some(Self::Param1),
-                1 => Some(Self::Param2),
-                2 => Some(Self::Param3),
-                3 => Some(Self::Param4),
-                4 => Some(Self::Param5),
-                5 => Some(Self::Param6),
-                _ => None,
+        impl crate::ToKey<Keys> for Fields {
+            fn to_key(&self) -> Keys {
+                match self {
+                    Fields::Param1(_) => Keys::Param1,
+                    Fields::Param2(_) => Keys::Param2,
+                    Fields::Param3(_) => Keys::Param3,
+                    Fields::Param4(_) => Keys::Param4,
+                    Fields::Param5(_) => Keys::Param5,
+                    Fields::Param6(_) => Keys::Param6,
+                }
             }
         }
-    }
 
-    impl From<MyDataAbsFields> for MyDataFlatFields {
-        fn from(value: MyDataAbsFields) -> Self {
-            match value {
-                MyDataAbsFields::Param1(value) => MyDataFlatFields::Param1(value),
-                MyDataAbsFields::Param2(value) => MyDataFlatFields::Param2(value),
-                MyDataAbsFields::Param3(value) => MyDataFlatFields::Param3(value),
-                MyDataAbsFields::Inner1(inner) | MyDataAbsFields::Inner2(inner) => match inner {
-                    MyInnerDataFields::Param4(value) => MyDataFlatFields::Param4(value),
-                    MyInnerDataFields::Param5(value) => MyDataFlatFields::Param5(value),
-                    MyInnerDataFields::Inner3(inner) | MyInnerDataFields::Inner4(inner) => {
-                        match inner {
-                            MyInnerInnerDataFields::Param6(value) => {
-                                MyDataFlatFields::Param6(value)
+        impl From<AbsKeys> for Keys {
+            fn from(value: AbsKeys) -> Self {
+                match value {
+                    AbsKeys::Param1 => Keys::Param1,
+                    AbsKeys::Param2 => Keys::Param2,
+                    AbsKeys::Param3 => Keys::Param3,
+                    AbsKeys::Inner1(inner) | AbsKeys::Inner2(inner) => match inner {
+                        my_inner_data::Keys::Param4 => Keys::Param4,
+                        my_inner_data::Keys::Param5 => Keys::Param5,
+                        my_inner_data::Keys::Inner3(inner) | my_inner_data::Keys::Inner4(inner) => {
+                            match inner {
+                                my_inner_inner_data::Keys::Param6 => Keys::Param6,
                             }
                         }
+                    },
+                }
+            }
+        }
+
+        impl crate::ToFromUsize for Keys {
+            fn to_usize(&self) -> usize {
+                match self {
+                    Self::Param1 => 0,
+                    Self::Param2 => 1,
+                    Self::Param3 => 2,
+                    Self::Param4 => 3,
+                    Self::Param5 => 4,
+                    Self::Param6 => 5,
+                }
+            }
+
+            fn try_from_usize(value: usize) -> Option<Self> {
+                match value {
+                    0 => Some(Self::Param1),
+                    1 => Some(Self::Param2),
+                    2 => Some(Self::Param3),
+                    3 => Some(Self::Param4),
+                    4 => Some(Self::Param5),
+                    5 => Some(Self::Param6),
+                    _ => None,
+                }
+            }
+        }
+
+        impl From<AbsFields> for Fields {
+            fn from(value: AbsFields) -> Self {
+                match value {
+                    AbsFields::Param1(value) => Fields::Param1(value),
+                    AbsFields::Param2(value) => Fields::Param2(value),
+                    AbsFields::Param3(value) => Fields::Param3(value),
+                    AbsFields::Inner1(inner) | AbsFields::Inner2(inner) => match inner {
+                        my_inner_data::Fields::Param4(value) => Fields::Param4(value),
+                        my_inner_data::Fields::Param5(value) => Fields::Param5(value),
+                        my_inner_data::Fields::Inner3(inner)
+                        | my_inner_data::Fields::Inner4(inner) => match inner {
+                            my_inner_inner_data::Fields::Param6(value) => Fields::Param6(value),
+                        },
+                    },
+                }
+            }
+        }
+
+        impl From<MyInnerInnerDataFocus> for u8 {
+            fn from(value: MyInnerInnerDataFocus) -> Self {
+                match value {
+                    MyInnerInnerDataFocus::Inner3 => 0,
+                    MyInnerInnerDataFocus::Inner4 => 1,
+                }
+            }
+        }
+
+        impl TryFrom<u8> for MyInnerInnerDataFocus {
+            type Error = ();
+
+            fn try_from(value: u8) -> Result<Self, Self::Error> {
+                match value {
+                    0 => Ok(MyInnerInnerDataFocus::Inner3),
+                    1 => Ok(MyInnerInnerDataFocus::Inner4),
+                    _ => Err(()),
+                }
+            }
+        }
+
+        impl crate::ToFull<AbsKeys, my_inner_data::Keys> for MyInnerDataFolderPath {
+            fn build_full(&self, internal: my_inner_data::Keys) -> AbsKeys {
+                match self {
+                    Self::Inner1 => AbsKeys::Inner1(internal),
+                    Self::Inner2 => AbsKeys::Inner2(internal),
+                }
+            }
+        }
+
+        impl crate::ToFull<AbsFields, my_inner_data::Fields> for MyInnerDataFolderPath {
+            fn build_full(&self, internal: my_inner_data::Fields) -> AbsFields {
+                match self {
+                    Self::Inner1 => AbsFields::Inner1(internal),
+                    Self::Inner2 => AbsFields::Inner2(internal),
+                }
+            }
+        }
+
+        impl crate::ToFull<AbsKeys, my_inner_inner_data::Keys> for MyInnerInnerDataFolderPath {
+            fn build_full(&self, internal: my_inner_inner_data::Keys) -> AbsKeys {
+                match self {
+                    Self::Inner1(inner) => AbsKeys::Inner1(inner.build_full(internal)),
+                    Self::Inner2(inner) => AbsKeys::Inner2(inner.build_full(internal)),
+                }
+            }
+        }
+
+        impl crate::ToFull<AbsFields, my_inner_inner_data::Fields>
+            for MyInnerInnerDataFolderPath
+        {
+            fn build_full(&self, internal: my_inner_inner_data::Fields) -> AbsFields {
+                match self {
+                    Self::Inner1(inner) => AbsFields::Inner1(inner.build_full(internal)),
+                    Self::Inner2(inner) => AbsFields::Inner2(inner.build_full(internal)),
+                }
+            }
+        }
+
+        impl From<MyInnerDataFocus> for u8 {
+            fn from(value: MyInnerDataFocus) -> Self {
+                match value {
+                    MyInnerDataFocus::Inner1 => 0,
+                    MyInnerDataFocus::Inner2 => 1,
+                }
+            }
+        }
+
+        impl TryFrom<u8> for MyInnerDataFocus {
+            type Error = ();
+
+            fn try_from(value: u8) -> Result<Self, Self::Error> {
+                match value {
+                    0 => Ok(MyInnerDataFocus::Inner1),
+                    1 => Ok(MyInnerDataFocus::Inner2),
+                    _ => Err(()),
+                }
+            }
+        }
+
+        pub(crate) const MY_DATA_ABS_VARIANT_COUNT: usize = 11;
+        pub(crate) const MY_DATA_ABS_KEYS_ALL_VARIANTS: [AbsKeys; MY_DATA_ABS_VARIANT_COUNT] = [
+            AbsKeys::Param1,
+            AbsKeys::Param2,
+            AbsKeys::Param3,
+            AbsKeys::Inner1(my_inner_data::Keys::Param4),
+            AbsKeys::Inner1(my_inner_data::Keys::Param5),
+            AbsKeys::Inner1(my_inner_data::Keys::Inner3(
+                my_inner_inner_data::Keys::Param6,
+            )),
+            AbsKeys::Inner1(my_inner_data::Keys::Inner4(
+                my_inner_inner_data::Keys::Param6,
+            )),
+            AbsKeys::Inner2(my_inner_data::Keys::Param4),
+            AbsKeys::Inner2(my_inner_data::Keys::Param5),
+            AbsKeys::Inner2(my_inner_data::Keys::Inner3(
+                my_inner_inner_data::Keys::Param6,
+            )),
+            AbsKeys::Inner2(my_inner_data::Keys::Inner4(
+                my_inner_inner_data::Keys::Param6,
+            )),
+        ];
+
+        impl crate::VariantCount for AbsKeys {
+            const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
+        }
+
+        impl crate::AllVariants for AbsKeys {
+            const ALL_VARIANTS: &[Self] = &MY_DATA_ABS_KEYS_ALL_VARIANTS;
+        }
+
+        impl crate::VariantCount for AbsFields {
+            const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
+        }
+
+        pub(crate) const MY_DATA_FLAT_VARIANT_COUNT: usize = 6;
+
+        impl crate::VariantCount for Keys {
+            const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
+        }
+
+        impl crate::VariantCount for Fields {
+            const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
+        }
+
+        impl crate::AbsKeyConstraints for AbsKeys {}
+
+        impl crate::AbsFieldConstraints<AbsKeys> for AbsFields {}
+
+        impl crate::FlatKeyConstraints<AbsKeys> for Keys {}
+
+        impl crate::FlatFieldConstraints<AbsFields, Keys> for Fields {}
+
+        impl crate::FocusConstraints for MyInnerInnerDataFocus {}
+        impl crate::FocusConstraints for MyInnerDataFocus {}
+
+        impl
+            crate::PathConstraints<
+                (AbsKeys, AbsFields),
+                (my_inner_inner_data::Keys, my_inner_inner_data::Fields),
+            > for MyInnerInnerDataFolderPath
+        {
+        }
+        impl
+            crate::PathConstraints<
+                (AbsKeys, AbsFields),
+                (my_inner_data::Keys, my_inner_data::Fields),
+            > for MyInnerDataFolderPath
+        {
+        }
+
+        impl crate::DataFieldAccessor<AbsKeys, AbsFields> for MyLayerData {
+            fn get(&self, key: AbsKeys) -> AbsFields {
+                match key {
+                    AbsKeys::Param1 => AbsFields::Param1(self.param1.clone()),
+                    AbsKeys::Param2 => AbsFields::Param2(self.param2.clone()),
+                    AbsKeys::Param3 => AbsFields::Param3(self.param3.clone()),
+                    AbsKeys::Inner1(key) => AbsFields::Inner1(self.inner1.get(key)),
+                    AbsKeys::Inner2(key) => AbsFields::Inner2(self.inner2.get(key)),
+                }
+            }
+
+            fn set(&mut self, field: AbsFields) {
+                match field {
+                    AbsFields::Param1(value) => self.param1 = value,
+                    AbsFields::Param2(value) => self.param2 = value,
+                    AbsFields::Param3(value) => self.param3 = value,
+                    AbsFields::Inner1(field) => self.inner1.set(field),
+                    AbsFields::Inner2(field) => self.inner2.set(field),
+                }
+            }
+        }
+
+        impl crate::DataFieldTryAccessor<AbsKeys, u8> for MyLayerData {
+            fn try_get(&self, key: AbsKeys) -> Result<u8, crate::AccessorError> {
+                match key {
+                    AbsKeys::Param1 => Ok(self.param1.clone()),
+                    AbsKeys::Param3 => Ok(self.param3.clone()),
+                    AbsKeys::Inner1(key) => self.inner1.try_get(key),
+                    AbsKeys::Inner2(key) => self.inner2.try_get(key),
+                    _ => Err(crate::AccessorError::TypeMissmatch("u8")),
+                }
+            }
+
+            fn try_set(&mut self, key: AbsKeys, value: u8) -> Result<(), crate::AccessorError> {
+                match key {
+                    AbsKeys::Param1 => {
+                        self.param1 = value;
+                        Ok(())
                     }
-                },
-            }
-        }
-    }
-
-    impl ToFull<MyInnerDataKeys, MyInnerInnerDataKeys> for MyInnerData_MyInnerInnerData_FolderPath {
-        fn build_full(&self, internal: MyInnerInnerDataKeys) -> MyInnerDataKeys {
-            match self {
-                Self::Inner3 => MyInnerDataKeys::Inner3(internal),
-                Self::Inner4 => MyInnerDataKeys::Inner3(internal),
-            }
-        }
-    }
-
-    impl ToFull<MyInnerDataFields, MyInnerInnerDataFields> for MyInnerData_MyInnerInnerData_FolderPath {
-        fn build_full(&self, internal: MyInnerInnerDataFields) -> MyInnerDataFields {
-            match self {
-                Self::Inner3 => MyInnerDataFields::Inner3(internal),
-                Self::Inner4 => MyInnerDataFields::Inner3(internal),
-            }
-        }
-    }
-
-    impl ToFull<MyDataAbsKeys, MyInnerDataKeys> for MyLayerData_MyInnerData_FolderPath {
-        fn build_full(&self, internal: MyInnerDataKeys) -> MyDataAbsKeys {
-            match self {
-                Self::Inner1 => MyDataAbsKeys::Inner1(internal),
-                Self::Inner2 => MyDataAbsKeys::Inner2(internal),
-            }
-        }
-    }
-
-    impl ToFull<MyDataAbsFields, MyInnerDataFields> for MyLayerData_MyInnerData_FolderPath {
-        fn build_full(&self, internal: MyInnerDataFields) -> MyDataAbsFields {
-            match self {
-                Self::Inner1 => MyDataAbsFields::Inner1(internal),
-                Self::Inner2 => MyDataAbsFields::Inner2(internal),
-            }
-        }
-    }
-
-    impl ToFull<MyDataAbsKeys, MyInnerInnerDataKeys> for MyLayerData_MyInnerInnerData_FolderPath {
-        fn build_full(&self, internal: MyInnerInnerDataKeys) -> MyDataAbsKeys {
-            match self {
-                Self::Inner1(inner) => MyDataAbsKeys::Inner1(inner.build_full(internal)),
-                Self::Inner2(inner) => MyDataAbsKeys::Inner2(inner.build_full(internal)),
-            }
-        }
-    }
-
-    impl ToFull<MyDataAbsFields, MyInnerInnerDataFields> for MyLayerData_MyInnerInnerData_FolderPath {
-        fn build_full(&self, internal: MyInnerInnerDataFields) -> MyDataAbsFields {
-            match self {
-                Self::Inner1(inner) => MyDataAbsFields::Inner1(inner.build_full(internal)),
-                Self::Inner2(inner) => MyDataAbsFields::Inner2(inner.build_full(internal)),
-            }
-        }
-    }
-
-    impl From<MyInnerInnerDataFocus> for u8 {
-        fn from(value: MyInnerInnerDataFocus) -> Self {
-            match value {
-                MyInnerInnerDataFocus::Inner3 => 0,
-                MyInnerInnerDataFocus::Inner4 => 1,
-            }
-        }
-    }
-
-    impl TryFrom<u8> for MyInnerInnerDataFocus {
-        type Error = ();
-
-        fn try_from(value: u8) -> Result<Self, Self::Error> {
-            match value {
-                0 => Ok(MyInnerInnerDataFocus::Inner3),
-                1 => Ok(MyInnerInnerDataFocus::Inner4),
-                _ => Err(()),
-            }
-        }
-    }
-
-    impl From<MyInnerDataFocus> for u8 {
-        fn from(value: MyInnerDataFocus) -> Self {
-            match value {
-                MyInnerDataFocus::Inner1 => 0,
-                MyInnerDataFocus::Inner2 => 1,
-            }
-        }
-    }
-
-    impl TryFrom<u8> for MyInnerDataFocus {
-        type Error = ();
-
-        fn try_from(value: u8) -> Result<Self, Self::Error> {
-            match value {
-                0 => Ok(MyInnerDataFocus::Inner1),
-                1 => Ok(MyInnerDataFocus::Inner2),
-                _ => Err(()),
-            }
-        }
-    }
-
-    pub(crate) const MY_DATA_ABS_VARIANT_COUNT: usize = 11;
-    pub(crate) const MY_DATA_ABS_KEYS_ALL_VARIANTS: [MyDataAbsKeys; MY_DATA_ABS_VARIANT_COUNT] = [
-        MyDataAbsKeys::Param1,
-        MyDataAbsKeys::Param2,
-        MyDataAbsKeys::Param3,
-        MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4),
-        MyDataAbsKeys::Inner1(MyInnerDataKeys::Param5),
-        MyDataAbsKeys::Inner1(MyInnerDataKeys::Inner3(MyInnerInnerDataKeys::Param6)),
-        MyDataAbsKeys::Inner1(MyInnerDataKeys::Inner4(MyInnerInnerDataKeys::Param6)),
-        MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4),
-        MyDataAbsKeys::Inner2(MyInnerDataKeys::Param5),
-        MyDataAbsKeys::Inner2(MyInnerDataKeys::Inner3(MyInnerInnerDataKeys::Param6)),
-        MyDataAbsKeys::Inner2(MyInnerDataKeys::Inner4(MyInnerInnerDataKeys::Param6)),
-    ];
-
-    impl VariantCount for MyDataAbsKeys {
-        const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
-    }
-
-    impl AllVariants for MyDataAbsKeys {
-        const ALL_VARIANTS: &[Self] = &MY_DATA_ABS_KEYS_ALL_VARIANTS;
-    }
-
-    impl VariantCount for MyDataAbsFields {
-        const COUNT: usize = MY_DATA_ABS_VARIANT_COUNT;
-    }
-
-    pub(crate) const MY_DATA_FLAT_VARIANT_COUNT: usize = 6;
-
-    impl VariantCount for MyDataFlatKeys {
-        const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
-    }
-
-    impl VariantCount for MyDataFlatFields {
-        const COUNT: usize = MY_DATA_FLAT_VARIANT_COUNT;
-    }
-
-    impl AbsKeyConstraints for MyDataAbsKeys {}
-
-    impl AbsFieldConstraints<MyDataAbsKeys> for MyDataAbsFields {}
-
-    impl FlatKeyConstraints<MyDataAbsKeys> for MyDataFlatKeys {}
-
-    impl FlatFieldConstraints<MyDataAbsFields, MyDataFlatKeys> for MyDataFlatFields {}
-
-    impl FocusConstraints for MyInnerInnerDataFocus {}
-    impl FocusConstraints for MyInnerDataFocus {}
-
-    impl
-        PathConstraints<
-            (MyDataAbsKeys, MyDataAbsFields),
-            (MyInnerInnerDataKeys, MyInnerInnerDataFields),
-        > for MyLayerData_MyInnerInnerData_FolderPath
-    {
-    }
-    impl PathConstraints<(MyDataAbsKeys, MyDataAbsFields), (MyInnerDataKeys, MyInnerDataFields)>
-        for MyLayerData_MyInnerData_FolderPath
-    {
-    }
-
-    impl DataFieldAccessor<MyInnerInnerDataKeys, MyInnerInnerDataFields> for MyInnerInnerData {
-        fn get(&self, key: MyInnerInnerDataKeys) -> MyInnerInnerDataFields {
-            match key {
-                MyInnerInnerDataKeys::Param6 => MyInnerInnerDataFields::Param6(self.param6.clone()),
-            }
-        }
-
-        fn set(&mut self, field: MyInnerInnerDataFields) {
-            match field {
-                MyInnerInnerDataFields::Param6(value) => self.param6 = value,
-            }
-        }
-    }
-
-    impl DataFieldTryAccessor<MyInnerInnerDataKeys, u8> for MyInnerInnerData {
-        fn try_get(&self, key: MyInnerInnerDataKeys) -> Result<u8, AccessorError> {
-            match key {
-                MyInnerInnerDataKeys::Param6 => Ok(self.param6.clone()),
-            }
-        }
-
-        fn try_set(&mut self, key: MyInnerInnerDataKeys, value: u8) -> Result<(), AccessorError> {
-            match key {
-                MyInnerInnerDataKeys::Param6 => {
-                    self.param6 = value;
-                    Ok(())
+                    AbsKeys::Param3 => {
+                        self.param3 = value;
+                        Ok(())
+                    }
+                    AbsKeys::Inner1(key) => self.inner1.try_set(key, value),
+                    AbsKeys::Inner2(key) => self.inner2.try_set(key, value),
+                    _ => Err(crate::AccessorError::TypeMissmatch("u8")),
                 }
             }
         }
-    }
 
-    impl DataFieldAccessor<MyInnerDataKeys, MyInnerDataFields> for MyInnerData {
-        fn get(&self, key: MyInnerDataKeys) -> MyInnerDataFields {
-            match key {
-                MyInnerDataKeys::Param4 => MyInnerDataFields::Param4(self.param4.clone()),
-                MyInnerDataKeys::Param5 => MyInnerDataFields::Param5(self.param5.clone()),
-                MyInnerDataKeys::Inner3(key) => MyInnerDataFields::Inner3(self.inner3.get(key)),
-                MyInnerDataKeys::Inner4(key) => MyInnerDataFields::Inner4(self.inner4.get(key)),
-            }
-        }
-
-        fn set(&mut self, field: MyInnerDataFields) {
-            match field {
-                MyInnerDataFields::Param4(value) => self.param4 = value,
-                MyInnerDataFields::Param5(value) => self.param5 = value,
-                MyInnerDataFields::Inner3(field) => self.inner3.set(field),
-                MyInnerDataFields::Inner4(field) => self.inner4.set(field),
-            }
-        }
-    }
-
-    impl DataFieldTryAccessor<MyInnerDataKeys, u8> for MyInnerData {
-        fn try_get(&self, key: MyInnerDataKeys) -> Result<u8, AccessorError> {
-            match key {
-                MyInnerDataKeys::Param4 => todo!(),
-                MyInnerDataKeys::Inner3(key) => self.inner3.try_get(key),
-                MyInnerDataKeys::Inner4(key) => self.inner4.try_get(key),
-                _ => Err(AccessorError::TypeMissmatch("u8")),
-            }
-        }
-
-        fn try_set(&mut self, key: MyInnerDataKeys, value: u8) -> Result<(), AccessorError> {
-            match key {
-                MyInnerDataKeys::Param4 => {
-                    self.param4 = value;
-                    Ok(())
+        impl crate::DataFieldTryAccessor<AbsKeys, bool> for MyLayerData {
+            fn try_get(&self, key: AbsKeys) -> Result<bool, crate::AccessorError> {
+                match key {
+                    AbsKeys::Param2 => Ok(self.param2.clone()),
+                    AbsKeys::Inner1(key) => self.inner1.try_get(key),
+                    AbsKeys::Inner2(key) => self.inner2.try_get(key),
+                    _ => Err(crate::AccessorError::TypeMissmatch("bool")),
                 }
-                MyInnerDataKeys::Inner3(key) => self.inner3.try_set(key, value),
-                MyInnerDataKeys::Inner4(key) => self.inner4.try_set(key, value),
-                _ => Err(AccessorError::TypeMissmatch("u8")),
             }
-        }
-    }
 
-    impl DataFieldTryAccessor<MyInnerDataKeys, bool> for MyInnerData {
-        fn try_get(&self, key: MyInnerDataKeys) -> Result<bool, AccessorError> {
-            match key {
-                MyInnerDataKeys::Param5 => Ok(self.param5.clone()),
-                _ => Err(AccessorError::TypeMissmatch("bool")),
-            }
-        }
-
-        fn try_set(&mut self, key: MyInnerDataKeys, value: bool) -> Result<(), AccessorError> {
-            match key {
-                MyInnerDataKeys::Param5 => {
-                    self.param5 = value;
-                    Ok(())
+            fn try_set(&mut self, key: AbsKeys, value: bool) -> Result<(), crate::AccessorError> {
+                match key {
+                    AbsKeys::Param2 => {
+                        self.param2 = value;
+                        Ok(())
+                    }
+                    AbsKeys::Inner1(key) => self.inner1.try_set(key, value),
+                    AbsKeys::Inner2(key) => self.inner2.try_set(key, value),
+                    _ => Err(crate::AccessorError::TypeMissmatch("bool")),
                 }
-                _ => Err(AccessorError::TypeMissmatch("bool")),
-            }
-        }
-    }
-
-    impl DataFieldAccessor<MyDataAbsKeys, MyDataAbsFields> for MyLayerData {
-        fn get(&self, key: MyDataAbsKeys) -> MyDataAbsFields {
-            match key {
-                MyDataAbsKeys::Param1 => MyDataAbsFields::Param1(self.param1.clone()),
-                MyDataAbsKeys::Param2 => MyDataAbsFields::Param2(self.param2.clone()),
-                MyDataAbsKeys::Param3 => MyDataAbsFields::Param3(self.param3.clone()),
-                MyDataAbsKeys::Inner1(key) => MyDataAbsFields::Inner1(self.inner1.get(key)),
-                MyDataAbsKeys::Inner2(key) => MyDataAbsFields::Inner2(self.inner2.get(key)),
             }
         }
 
-        fn set(&mut self, field: MyDataAbsFields) {
-            match field {
-                MyDataAbsFields::Param1(value) => self.param1 = value,
-                MyDataAbsFields::Param2(value) => self.param2 = value,
-                MyDataAbsFields::Param3(value) => self.param3 = value,
-                MyDataAbsFields::Inner1(field) => self.inner1.set(field),
-                MyDataAbsFields::Inner2(field) => self.inner2.set(field),
-            }
-        }
-    }
+        impl crate::FolderHandler<(), super::TestLayerDatabaseDescription> for MyLayerData {
+            type Content = Self;
 
-    impl DataFieldTryAccessor<MyDataAbsKeys, u8> for MyLayerData {
-        fn try_get(&self, key: MyDataAbsKeys) -> Result<u8, AccessorError> {
-            match key {
-                MyDataAbsKeys::Param1 => Ok(self.param1.clone()),
-                MyDataAbsKeys::Param3 => Ok(self.param3.clone()),
-                MyDataAbsKeys::Inner1(key) => self.inner1.try_get(key),
-                MyDataAbsKeys::Inner2(key) => self.inner2.try_get(key),
-                _ => Err(AccessorError::TypeMissmatch("u8")),
+            fn get_at<'a>(&'a self, _path: ()) -> &'a Self::Content {
+                self
             }
-        }
 
-        fn try_set(&mut self, key: MyDataAbsKeys, value: u8) -> Result<(), AccessorError> {
-            match key {
-                MyDataAbsKeys::Param1 => {
-                    self.param1 = value;
-                    Ok(())
+            fn get_at_mut<'a>(&'a mut self, _path: ()) -> &'a mut Self::Content {
+                self
+            }
+
+            fn compare(
+                &self,
+                differing_keys: &mut dyn crate::DynamicKeySet<AbsKeys, Keys>,
+                _path: (),
+                other: &Self::Content,
+            ) -> Result<(), crate::DatabaseError> {
+                if self.param1 != other.param1 {
+                    differing_keys.insert_flat_key(Keys::Param1)?;
                 }
-                MyDataAbsKeys::Param3 => {
-                    self.param3 = value;
-                    Ok(())
+
+                if self.param2 != other.param2 {
+                    differing_keys.insert_flat_key(Keys::Param2)?;
                 }
-                MyDataAbsKeys::Inner1(key) => self.inner1.try_set(key, value),
-                MyDataAbsKeys::Inner2(key) => self.inner2.try_set(key, value),
-                _ => Err(AccessorError::TypeMissmatch("u8")),
-            }
-        }
-    }
 
-    impl DataFieldTryAccessor<MyDataAbsKeys, bool> for MyLayerData {
-        fn try_get(&self, key: MyDataAbsKeys) -> Result<bool, AccessorError> {
-            match key {
-                MyDataAbsKeys::Param2 => Ok(self.param2.clone()),
-                MyDataAbsKeys::Inner1(key) => self.inner1.try_get(key),
-                MyDataAbsKeys::Inner2(key) => self.inner2.try_get(key),
-                _ => Err(AccessorError::TypeMissmatch("bool")),
-            }
-        }
-
-        fn try_set(&mut self, key: MyDataAbsKeys, value: bool) -> Result<(), AccessorError> {
-            match key {
-                MyDataAbsKeys::Param2 => {
-                    self.param2 = value;
-                    Ok(())
+                if self.param3 != other.param3 {
+                    differing_keys.insert_flat_key(Keys::Param3)?;
                 }
-                MyDataAbsKeys::Inner1(key) => self.inner1.try_set(key, value),
-                MyDataAbsKeys::Inner2(key) => self.inner2.try_set(key, value),
-                _ => Err(AccessorError::TypeMissmatch("bool")),
+
+                Ok(())
+            }
+
+            fn clone(
+                &mut self,
+                differing_keys: &mut dyn crate::DynamicKeySet<AbsKeys, Keys>,
+                _path: (),
+                other: &Self::Content,
+            ) -> Result<(), crate::DatabaseError> {
+                if self.param1 != other.param1 {
+                    self.param1 = other.param1;
+                    differing_keys.insert_flat_key(Keys::Param1)?;
+                }
+
+                if self.param2 != other.param2 {
+                    self.param2 = other.param2;
+                    differing_keys.insert_flat_key(Keys::Param2)?;
+                }
+
+                if self.param3 != other.param3 {
+                    self.param3 = other.param3;
+                    differing_keys.insert_flat_key(Keys::Param3)?;
+                }
+
+                Ok(())
+            }
+        }
+
+        impl
+            crate::FolderHandler<
+                MyInnerDataFolderPath,
+                crate::TestLayerDatabaseDescription,
+            > for MyLayerData
+        {
+            type Content = super::MyInnerData;
+
+            fn get_at<'a>(&'a self, path: MyInnerDataFolderPath) -> &'a Self::Content {
+                match path {
+                    MyInnerDataFolderPath::Inner1 => &self.inner1,
+                    MyInnerDataFolderPath::Inner2 => &self.inner2,
+                }
+            }
+
+            fn get_at_mut<'a>(
+                &'a mut self,
+                path: MyInnerDataFolderPath,
+            ) -> &'a mut Self::Content {
+                match path {
+                    MyInnerDataFolderPath::Inner1 => &mut self.inner1,
+                    MyInnerDataFolderPath::Inner2 => &mut self.inner2,
+                }
+            }
+
+            fn compare(
+                &self,
+                _differing_keys: &mut dyn crate::DynamicKeySet<AbsKeys, Keys>,
+                _path: MyInnerDataFolderPath,
+                _other: &Self::Content,
+            ) -> Result<(), crate::DatabaseError> {
+                todo!()
+            }
+
+            fn clone(
+                &mut self,
+                _differing_keys: &mut dyn crate::DynamicKeySet<AbsKeys, Keys>,
+                _path: MyInnerDataFolderPath,
+                _other: &Self::Content,
+            ) -> Result<(), crate::database_core::DatabaseError> {
+                todo!()
             }
         }
     }
 
-    impl FolderHandler<(), TestLayerDatabaseDescription> for MyLayerData {
-        type Content = Self;
-
-        fn get_at<'a>(&'a self, _path: ()) -> &'a Self::Content {
-            self
-        }
-
-        fn get_at_mut<'a>(&'a mut self, _path: ()) -> &'a mut Self::Content {
-            self
-        }
-
-        fn compare(
-            &self,
-            differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
-            _path: (),
-            other: &Self::Content,
-        ) -> Result<(), DatabaseError> {
-            if self.param1 != other.param1 {
-                differing_keys.insert_flat_key(MyDataFlatKeys::Param1)?;
-            }
-
-            if self.param2 != other.param2 {
-                differing_keys.insert_flat_key(MyDataFlatKeys::Param2)?;
-            }
-
-            if self.param3 != other.param3 {
-                differing_keys.insert_flat_key(MyDataFlatKeys::Param3)?;
-            }
-
-            Ok(())
-        }
-
-        fn clone(
-            &mut self,
-            differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
-            _path: (),
-            other: &Self::Content,
-        ) -> Result<(), crate::database_core::DatabaseError> {
-            if self.param1 != other.param1 {
-                self.param1 = other.param1;
-                differing_keys.insert_flat_key(MyDataFlatKeys::Param1)?;
-            }
-
-            if self.param2 != other.param2 {
-                self.param2 = other.param2;
-                differing_keys.insert_flat_key(MyDataFlatKeys::Param2)?;
-            }
-
-            if self.param3 != other.param3 {
-                self.param3 = other.param3;
-                differing_keys.insert_flat_key(MyDataFlatKeys::Param3)?;
-            }
-
-            Ok(())
-        }
-    }
-
-    impl FolderHandler<MyLayerData_MyInnerData_FolderPath, TestLayerDatabaseDescription>
-        for MyLayerData
-    {
-        type Content = MyInnerData;
-
-        fn get_at<'a>(&'a self, path: MyLayerData_MyInnerData_FolderPath) -> &'a Self::Content {
-            match path {
-                MyLayerData_MyInnerData_FolderPath::Inner1 => &self.inner1,
-                MyLayerData_MyInnerData_FolderPath::Inner2 => &self.inner2,
-            }
-        }
-
-        fn get_at_mut<'a>(
-            &'a mut self,
-            path: MyLayerData_MyInnerData_FolderPath,
-        ) -> &'a mut Self::Content {
-            match path {
-                MyLayerData_MyInnerData_FolderPath::Inner1 => &mut self.inner1,
-                MyLayerData_MyInnerData_FolderPath::Inner2 => &mut self.inner2,
-            }
-        }
-
-        fn compare(
-            &self,
-            _differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
-            _path: MyLayerData_MyInnerData_FolderPath,
-            _other: &Self::Content,
-        ) -> Result<(), DatabaseError> {
-            todo!()
-        }
-
-        fn clone(
-            &mut self,
-            _differing_keys: &mut dyn DynamicKeySet<MyDataAbsKeys, MyDataFlatKeys>,
-            _path: MyLayerData_MyInnerData_FolderPath,
-            _other: &Self::Content,
-        ) -> Result<(), crate::database_core::DatabaseError> {
-            todo!()
-        }
-    }
+    #[allow(unused_imports)]
+    pub use my_layer_data::*;
 }

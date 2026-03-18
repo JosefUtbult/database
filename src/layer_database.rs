@@ -1,8 +1,6 @@
 use crate::{
-    AbsPair, DatabaseDescription, FocusConstraints, FocusHandler, FolderFocus, Pair,
-    PathConstraints,
+    DatabaseDescription, FocusHandler,
     database_core::{DatabaseCore, DatabaseError},
-    database_traits::ToKey,
 };
 
 use mutex_traits::{ConstInit, ScopedRawMutex};
@@ -69,15 +67,12 @@ pub(crate) mod test {
     use crate::{
         LayerDatabase,
         focus_handler::FolderFocus,
-        layer::{
-            MyDataAbsFields, MyDataAbsKeys, MyDataFlatFields, MyDataFlatKeys, MyInnerDataFields,
-        },
+        layer::{AbsFields, AbsKeys, Fields, Keys, MyInnerDataFocus, MyLayerData, my_inner_data},
         mutex::test_mutex::Mutex,
         test_data_field_accessor::MyFocusHandler,
         test_types::{
             TEST_LAYER_DATABASE_ABS_COUNT, TEST_LAYER_DATABASE_FLAT_COUNT,
             TestLayerDatabaseDescription,
-            layer::{MyInnerDataFocus, MyInnerDataKeys, MyLayerData},
         },
     };
 
@@ -102,50 +97,50 @@ pub(crate) mod test {
     #[test]
     fn set_data() {
         let database = build_database();
-        database.set(MyDataFlatFields::Param1(1)).unwrap();
+        database.set(Fields::Param1(1)).unwrap();
     }
 
     #[test]
     fn set_absolute_data() {
         let database = build_database();
-        database.set_absolute(MyDataAbsFields::Param1(1)).unwrap();
+        database.set_absolute(AbsFields::Param1(1)).unwrap();
     }
 
     #[test]
     fn get_data() {
         let database = build_database();
-        let _ = database.get(MyDataFlatKeys::Param1).unwrap();
+        let _ = database.get(Keys::Param1).unwrap();
     }
 
     #[test]
     fn get_absolute_data() {
         let database = build_database();
-        let _ = database.get_absolute(MyDataAbsKeys::Param1).unwrap();
+        let _ = database.get_absolute(AbsKeys::Param1).unwrap();
     }
 
     #[test]
     fn set_get_data() {
         let database = build_database();
-        database.set(MyDataFlatFields::Param1(1)).unwrap();
-        let res = database.get(MyDataFlatKeys::Param1).unwrap();
-        assert!(matches!(res, MyDataFlatFields::Param1(1)));
+        database.set(Fields::Param1(1)).unwrap();
+        let res = database.get(Keys::Param1).unwrap();
+        assert!(matches!(res, Fields::Param1(1)));
     }
 
     #[test]
     fn set_get_absolute_data() {
         let database = build_database();
         database
-            .set_absolute(MyDataAbsFields::Inner1(MyInnerDataFields::Param4(1)))
+            .set_absolute(AbsFields::Inner1(my_inner_data::Fields::Param4(1)))
             .unwrap();
         database
-            .set_absolute(MyDataAbsFields::Inner2(MyInnerDataFields::Param4(2)))
+            .set_absolute(AbsFields::Inner2(my_inner_data::Fields::Param4(2)))
             .unwrap();
 
         let res1 = database
-            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4))
+            .get_absolute(AbsKeys::Inner1(my_inner_data::Keys::Param4))
             .unwrap();
         let res2 = database
-            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4))
+            .get_absolute(AbsKeys::Inner2(my_inner_data::Keys::Param4))
             .unwrap();
 
         std::println!(
@@ -166,50 +161,50 @@ pub(crate) mod test {
             res2
         );
 
-        assert!(matches!(res1, MyDataFlatFields::Param4(1)));
-        assert!(matches!(res2, MyDataFlatFields::Param4(2)));
+        assert!(matches!(res1, Fields::Param4(1)));
+        assert!(matches!(res2, Fields::Param4(2)));
     }
 
     #[test]
     fn get_data_focus_change() {
         let database = build_database();
         database
-            .set_absolute(MyDataAbsFields::Inner1(MyInnerDataFields::Param4(1)))
+            .set_absolute(AbsFields::Inner1(my_inner_data::Fields::Param4(1)))
             .unwrap();
 
         database
-            .set_absolute(MyDataAbsFields::Inner2(MyInnerDataFields::Param4(2)))
+            .set_absolute(AbsFields::Inner2(my_inner_data::Fields::Param4(2)))
             .unwrap();
 
-        let res1 = database.get(MyDataFlatKeys::Param4).unwrap();
-        database.set(MyDataFlatFields::Param4(2)).unwrap();
-        let res2 = database.get(MyDataFlatKeys::Param4).unwrap();
+        let res1 = database.get(Keys::Param4).unwrap();
+        database.set(Fields::Param4(2)).unwrap();
+        let res2 = database.get(Keys::Param4).unwrap();
 
-        assert!(matches!(res1, MyDataFlatFields::Param4(1)));
-        assert!(matches!(res2, MyDataFlatFields::Param4(2)));
+        assert!(matches!(res1, Fields::Param4(1)));
+        assert!(matches!(res2, Fields::Param4(2)));
     }
 
     #[test]
     fn set_data_focus_change() {
         let database = build_database();
-        database.set(MyDataFlatFields::Param4(1)).unwrap();
+        database.set(Fields::Param4(1)).unwrap();
 
         database
             .get_focus_handler()
             .set_focus(MyInnerDataFocus::Inner2);
 
-        database.set(MyDataFlatFields::Param4(2)).unwrap();
+        database.set(Fields::Param4(2)).unwrap();
 
         let res1 = database
-            .get_absolute(MyDataAbsKeys::Inner1(MyInnerDataKeys::Param4))
+            .get_absolute(AbsKeys::Inner1(my_inner_data::Keys::Param4))
             .unwrap();
 
         let res2 = database
-            .get_absolute(MyDataAbsKeys::Inner2(MyInnerDataKeys::Param4))
+            .get_absolute(AbsKeys::Inner2(my_inner_data::Keys::Param4))
             .unwrap();
 
-        assert!(matches!(res1, MyDataFlatFields::Param4(1)));
-        assert!(matches!(res2, MyDataFlatFields::Param4(2)));
+        assert!(matches!(res1, Fields::Param4(1)));
+        assert!(matches!(res2, Fields::Param4(2)));
     }
 
     #[test]
@@ -217,18 +212,18 @@ pub(crate) mod test {
         let database = build_database();
         let focus_handler = database.get_focus_handler();
 
-        database.set(MyDataFlatFields::Param4(1)).unwrap();
+        database.set(Fields::Param4(1)).unwrap();
 
         focus_handler.set_focus(MyInnerDataFocus::Inner2);
-        database.set(MyDataFlatFields::Param4(2)).unwrap();
+        database.set(Fields::Param4(2)).unwrap();
 
         focus_handler.set_focus(MyInnerDataFocus::Inner1);
-        let res1 = database.get(MyDataFlatKeys::Param4).unwrap();
+        let res1 = database.get(Keys::Param4).unwrap();
 
         focus_handler.set_focus(MyInnerDataFocus::Inner2);
-        let res2 = database.get(MyDataFlatKeys::Param4).unwrap();
+        let res2 = database.get(Keys::Param4).unwrap();
 
-        assert!(matches!(res1, MyDataFlatFields::Param4(1)));
-        assert!(matches!(res2, MyDataFlatFields::Param4(2)));
+        assert!(matches!(res1, Fields::Param4(1)));
+        assert!(matches!(res2, Fields::Param4(2)));
     }
 }
