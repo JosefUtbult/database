@@ -21,6 +21,7 @@ use super::{
 pub(crate) struct TypeNames {
     pub(crate) database_name: Ident,
     pub(crate) focus_handler_name: Ident,
+    pub(crate) database_description_name: Ident,
 }
 
 pub(crate) struct DataStructure {
@@ -65,6 +66,7 @@ fn get_type_names(data_structure: &mut DataStructure) {
     let type_names = TypeNames {
         database_name: format_ident!("{}Database", to_camel_case(&root_struct.name)),
         focus_handler_name: format_ident!("{}Focus", to_camel_case(&root_struct.name)),
+        database_description_name: format_ident!("{}Description", to_camel_case(&root_struct.name))
     };
 
     let _ = data_structure.type_names.insert(type_names);

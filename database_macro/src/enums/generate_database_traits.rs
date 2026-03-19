@@ -1,32 +1,22 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote};
 
-use crate::{
-    DataStructure,
-    casing::{to_camel_case, to_upper_snake_case},
-    data_structure::absolute_path::compare_abs_paths,
-    enums::abs_path_to_token_stream,
-};
+use crate::{DataStructure, casing::to_camel_case, data_structure::struct_data::StructData};
 
 fn generate_variant_count(
     crate_path: &TokenStream2,
-    data_structure: &DataStructure,
+    _data_structure: &DataStructure,
+    struct_data: &StructData,
 ) -> TokenStream2 {
-    let root_struct = data_structure.root_struct.as_ref().unwrap();
+    let flat_key_enum = struct_data.type_names.flat_key_enum.clone();
+    let flat_field_enum = struct_data.type_names.flat_field_enum.clone();
 
-    let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
-    let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
+    let flat_path_count_name = struct_data.type_names.flat_path_count_name.clone();
 
-    let flat_path_count_name = root_struct.type_names.flat_path_count_name.clone();
-    let flat_folder_count_name = root_struct.type_names.flat_folder_count_name.clone();
-
-    let flat_path_count = root_struct.field_to_field_abs_path_map.len();
-    let flat_folder_count = root_struct.field_to_folder_map.len();
+    let flat_path_count = struct_data.field_to_field_abs_path_map.len();
 
     quote! {
         pub const #flat_path_count_name: usize = #flat_path_count;
-
-        pub const #flat_folder_count_name: usize = #flat_folder_count;
 
         #[automatically_derived]
         impl #crate_path::VariantCount for #flat_field_enum {
@@ -42,56 +32,65 @@ fn generate_variant_count(
 
 fn generate_from_flat_key_to_usize(
     crate_path: &TokenStream2,
-    data_structure: &DataStructure,
+    _data_structure: &DataStructure,
+    struct_data: &StructData,
 ) -> TokenStream2 {
-    let root_struct = data_structure.root_struct.as_ref().unwrap();
+    let flat_key_enum = struct_data.type_names.flat_key_enum.clone();
 
-    let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
-
-    let mut all_fields: Vec<String> = root_struct
+    let mut all_fields: Vec<String> = struct_data
         .field_to_field_abs_path_map
         .iter()
         .map(|(field, _)| field.clone())
         .collect();
 
     all_fields.sort();
+    eprintln!("All fields {:?}", all_fields);
 
-    let all_keys: Vec<TokenStream2> = all_fields
+    let all_variants: (Vec<TokenStream2>, Vec<TokenStream2>) = all_fields
         .iter()
         .enumerate()
         .map(|(index, field)| {
             let field_name = format_ident!("{}", to_camel_case(&field));
-            quote! {
-                #flat_key_enum::#field_name => #index
-            }
+            let to_usize = quote! {
+                Self::#field_name => #index
+            };
+            let from_usize = quote! {
+                #index => Some(Self::#field_name)
+            };
+            (to_usize, from_usize)
         })
         .collect();
 
+    let (all_to_usize_matches, all_from_usize_matches) = all_variants;
+
     quote! {
         #[automatically_derived]
-        impl From<#flat_key_enum> for usize {
-            fn from(value: #flat_key_enum) -> Self {
+        impl #crate_path::ToFromUsize for #flat_key_enum {
+            fn to_usize(&self) -> usize {
+                match self {
+                    #(#all_to_usize_matches,)*
+                }
+            }
+
+            fn try_from_usize(value: usize) -> Option<Self> {
                 match value {
-                    #(#all_keys,)*
+                    #(#all_from_usize_matches,)*
+                    _ => None
                 }
             }
         }
-
-        #[automatically_derived]
-        impl #crate_path::UsizeConstraints<#flat_key_enum> for usize {}
     }
 }
 
 fn generate_database_traits(
     crate_path: &TokenStream2,
-    data_structure: &DataStructure,
+    _data_structure: &DataStructure,
+    struct_data: &StructData,
 ) -> TokenStream2 {
-    let root_struct = data_structure.root_struct.as_ref().unwrap();
-
-    let abs_key_enum = root_struct.type_names.abs_key_enum.clone();
-    let abs_field_enum = root_struct.type_names.abs_field_enum.clone();
-    let flat_key_enum = root_struct.type_names.flat_key_enum.clone();
-    let flat_field_enum = root_struct.type_names.flat_field_enum.clone();
+    let abs_key_enum = struct_data.type_names.abs_key_enum.clone();
+    let abs_field_enum = struct_data.type_names.abs_field_enum.clone();
+    let flat_key_enum = struct_data.type_names.flat_key_enum.clone();
+    let flat_field_enum = struct_data.type_names.flat_field_enum.clone();
 
     quote! {
         #[automatically_derived]
@@ -110,8 +109,21 @@ pub(crate) fn generate_database_constraints(
     data_structure: &DataStructure,
 ) -> TokenStream2 {
     let mut res = TokenStream2::new();
-    res.extend(generate_variant_count(crate_path, data_structure));
-    res.extend(generate_from_flat_key_to_usize(crate_path, data_structure));
-    res.extend(generate_database_traits(crate_path, data_structure));
+    let root_struct = data_structure.root_struct.as_ref().unwrap();
+    res.extend(generate_variant_count(
+        crate_path,
+        data_structure,
+        root_struct,
+    ));
+    res.extend(generate_from_flat_key_to_usize(
+        crate_path,
+        data_structure,
+        root_struct,
+    ));
+    res.extend(generate_database_traits(
+        crate_path,
+        data_structure,
+        root_struct,
+    ));
     res
 }

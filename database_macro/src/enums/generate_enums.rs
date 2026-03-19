@@ -53,8 +53,36 @@ pub(crate) fn generate_abs_enums(
                 #(#abs_key_variants,)*
             }
 
+            impl PartialEq for #abs_key_enum {
+                fn eq(&self, _other: &Self) -> bool {
+                    todo!()
+                }
+            }
+
+            impl Eq for #abs_key_enum {}
+
+            impl Clone for #abs_key_enum {
+                fn clone(&self) -> Self {
+                    todo!()
+                }
+            }
+
             pub enum #abs_field_enum {
                 #(#abs_field_variants,)*
+            }
+
+            impl PartialEq for #abs_field_enum {
+                fn eq(&self, _other: &Self) -> bool {
+                    todo!()
+                }
+            }
+
+            impl Eq for #abs_field_enum {}
+
+            impl Clone for #abs_field_enum {
+                fn clone(&self) -> Self {
+                    todo!()
+                }
             }
         }
     } else {
@@ -125,8 +153,36 @@ pub(crate) fn generate_flat_enums(
                 #(#flat_key_variants,)*
             }
 
+            impl PartialEq for #flat_key_enum {
+                fn eq(&self, _other: &Self) -> bool {
+                    todo!()
+                }
+            }
+
+            impl Eq for #flat_key_enum {}
+
+            impl Clone for #flat_key_enum {
+                fn clone(&self) -> Self {
+                    todo!()
+                }
+            }
+
             pub enum #flat_field_enum {
                 #(#flat_field_variants,)*
+            }
+
+            impl PartialEq for #flat_field_enum {
+                fn eq(&self, _other: &Self) -> bool {
+                    todo!()
+                }
+            }
+
+            impl Eq for #flat_field_enum {}
+
+            impl Clone for #flat_field_enum {
+                fn clone(&self) -> Self {
+                    todo!()
+                }
             }
         }
     } else {

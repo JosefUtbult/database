@@ -17,7 +17,12 @@ use quote::quote;
 
 use crate::{
     data_structure::{build_data_structure, DataStructure},
-    enums::{generate_abs_enums, generate_abs_from, generate_abs_impl_debug, generate_flat_enums, generate_flat_from, generate_flat_impl_debug},
+    enums::{
+        generate_abs_enums, generate_abs_from, generate_abs_impl_debug,
+        generate_database_constraints, generate_flat_enums, generate_flat_from,
+        generate_flat_impl_debug,
+    },
+    focus_handler::{generate_focus_handler, generate_folder_handler},
     parse_input::ParsedInput,
     structs::re_add_structs::re_add_structs,
 };
@@ -49,10 +54,10 @@ fn build_struct_code(
         res.extend(stream);
     }
 
-    // {
-    //     let stream = generate_data_field_accessors(&crate_path, &data_structure, &struct_data);
-    //     res.extend(stream);
-    // }
+    {
+        let stream = generate_folder_handler(&crate_path, &data_structure, &struct_data);
+        res.extend(stream);
+    }
 
     if *struct_name == data_structure.root_struct.as_ref().unwrap().name {
         {
@@ -67,6 +72,16 @@ fn build_struct_code(
 
         {
             let stream = generate_flat_from(&crate_path, &data_structure);
+            res.extend(stream);
+        }
+
+        {
+            let stream = generate_database_constraints(&crate_path, &data_structure);
+            res.extend(stream);
+        }
+
+        {
+            let stream = generate_focus_handler(&crate_path, &data_structure);
             res.extend(stream);
         }
     }
